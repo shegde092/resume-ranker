@@ -8,7 +8,12 @@ class ReciprocalRankFusion:
         # k is a smoothing constant, 60 is standard for RRF
         self.k = k
         
-    def fuse(self, dense_results: Dict[str, float], bm25_results: Dict[str, float], top_k: int = 2000) -> List[Dict[str, Any]]:
+    def fuse(
+        self, 
+        dense_results: Dict[str, float], 
+        bm25_results: Dict[str, float], 
+        top_k: int = 2000
+    ) -> List[Dict[str, Any]]:
         """
         Applies Reciprocal Rank Fusion to dense and BM25 results.
         Returns a sorted list of dicts: [{'candidate_id': ..., 'score': ...}, ...]
@@ -29,7 +34,7 @@ class ReciprocalRankFusion:
                 rrf_scores[cand_id] = 0.0
             rrf_scores[cand_id] += 1.0 / (self.k + rank)
             
-        # Sort combined results by RRF score
+        # Sort combined results by RRF score descending
         fused_ranked = sorted(rrf_scores.items(), key=lambda item: item[1], reverse=True)
         
         # Take Top K

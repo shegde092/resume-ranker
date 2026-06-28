@@ -2,7 +2,7 @@ import faiss
 import numpy as np
 from sentence_transformers import SentenceTransformer
 import logging
-from typing import List, Dict, Any
+from typing import List, Dict
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +34,7 @@ class DenseRetriever:
     def search(self, query: str, top_k: int = 2000) -> Dict[str, float]:
         """
         Search for top_k candidates given a query (JD).
-        Returns a dict mapping candidate_id -> score
+        Returns a dict mapping candidate_id -> dense_retrieval_score
         """
         if self.index.ntotal == 0:
             logger.warning("Dense index is empty.")

@@ -1,7 +1,7 @@
 import logging
 import numpy as np
 from rank_bm25 import BM25Okapi
-from typing import List, Dict, Any
+from typing import List, Dict
 
 logger = logging.getLogger(__name__)
 
@@ -11,12 +11,12 @@ class BM25Retriever:
         self.candidate_ids = []
         
     def _tokenize(self, text: str) -> List[str]:
-        # Simple whitespace tokenizer for BM25 lexical keyword retrieval
-        return text.lower().split()
+        # lowercase text, whitespace split, remove empty tokens
+        return [t for t in text.lower().split() if t]
         
     def add_candidates(self, documents: List[str], candidate_ids: List[str]):
         """
-        Build the BM25 sparse index.
+        Build the BM25 index.
         """
         if not documents:
             return
