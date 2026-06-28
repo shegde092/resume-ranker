@@ -19,8 +19,20 @@ class Settings(BaseSettings):
     
     # Model Configs
     MAX_CANDIDATES_RETRIEVAL: int = 2000
+    MAX_CANDIDATES_CE: int = 800
     MAX_CANDIDATES_RERANK: int = 500
     CHUNK_SIZE_TOKENS: int = 200
+    
+    # Phase 1 Fusion Strategy Weights
+    WEIGHT_CE: float = 0.40
+    WEIGHT_RRF: float = 0.30
+    WEIGHT_TRUST: float = 0.20
+    WEIGHT_LOGISTICS: float = 0.10
+    
+    # Cross Encoder Limits & Batching
+    FALLBACK_CE_CANDIDATES: int = 500
+    MIN_CE_CANDIDATES: int = 300
+    CE_BATCH_SIZE: int = 32
     
     model_config = SettingsConfigDict(env_file=".env")
 
