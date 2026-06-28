@@ -8,9 +8,9 @@ class ReciprocalRankFusion:
         # k is a smoothing constant, 60 is standard for RRF
         self.k = k
         
-    def fuse(self, dense_results: Dict[str, float], sparse_results: Dict[str, float], top_k: int = 2000) -> List[Dict[str, Any]]:
+    def fuse(self, dense_results: Dict[str, float], bm25_results: Dict[str, float], top_k: int = 2000) -> List[Dict[str, Any]]:
         """
-        Applies Reciprocal Rank Fusion to dense and sparse results.
+        Applies Reciprocal Rank Fusion to dense and BM25 results.
         Returns a sorted list of dicts: [{'candidate_id': ..., 'score': ...}, ...]
         """
         rrf_scores = {}
@@ -22,9 +22,9 @@ class ReciprocalRankFusion:
                 rrf_scores[cand_id] = 0.0
             rrf_scores[cand_id] += 1.0 / (self.k + rank)
             
-        # Rank sparse results
-        sparse_ranked = sorted(sparse_results.items(), key=lambda item: item[1], reverse=True)
-        for rank, (cand_id, _) in enumerate(sparse_ranked, start=1):
+        # Rank BM25 results
+        bm25_ranked = sorted(bm25_results.items(), key=lambda item: item[1], reverse=True)
+        for rank, (cand_id, _) in enumerate(bm25_ranked, start=1):
             if cand_id not in rrf_scores:
                 rrf_scores[cand_id] = 0.0
             rrf_scores[cand_id] += 1.0 / (self.k + rank)

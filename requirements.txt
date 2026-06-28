@@ -5,7 +5,7 @@ onnxruntime==1.17.1
 lightgbm==4.3.0
 faiss-cpu==1.8.0
 spacy==3.7.4
-splade==2.0
+
 pydantic==2.6.3
 pydantic-settings==2.2.1
 pyarrow==15.0.0
