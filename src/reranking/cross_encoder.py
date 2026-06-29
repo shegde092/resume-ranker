@@ -6,12 +6,7 @@ from transformers import AutoTokenizer
 from typing import List, Dict, Tuple, Any
 
 from src.config import settings
-from src.monitoring.metrics import (
-    CROSS_ENCODER_THROUGHPUT,
-    STAGE_LATENCY,
-    CROSS_ENCODER_FAILURES,
-    CROSS_ENCODER_BATCH_LATENCY
-)
+
 
 logger = logging.getLogger(__name__)
 
@@ -36,10 +31,7 @@ class ONNXCrossEncoder:
             self.is_loaded = True
             logger.info(f"Loaded ONNX CrossEncoder from {model_path}")
         except Exception as e:
-            logger.warning(f"Failed to load ONNX model at {model_path}: {e}. Will return dummy scores if used.")
-            self.session = None
-            self.is_loaded = False
-            
+            raise RuntimeError(f"Failed to load ONNX model at {model_path}: {e}")
     def warmup(self):
         """
         Run one dummy inference to reduce first-request latency.
@@ -63,9 +55,7 @@ class ONNXCrossEncoder:
             raise ValueError("batch_size must be > 0")
             
         if not self.is_loaded:
-            # Fallback for development/testing if ONNX model is missing
-            CROSS_ENCODER_FAILURES.inc()
-            return [0.5] * len(pairs)
+            raise RuntimeError("ONNX model is not loaded. Cannot perform inference.")
             
         all_scores = []
         
@@ -107,14 +97,14 @@ class ONNXCrossEncoder:
                     scores = 1 / (1 + np.exp(-logits))
                     
                 all_scores.extend(scores.tolist())
-                CROSS_ENCODER_THROUGHPUT.inc(len(batch_pairs))
+
             except Exception as e:
                 logger.error(f"CE batch inference failed: {e}")
-                CROSS_ENCODER_FAILURES.inc()
+                # Return 0.0 for this batch so a single bad candidate doesn't crash the entire request
                 all_scores.extend([0.0] * len(batch_pairs))
                 
             batch_duration = time.time() - batch_start_time
-            CROSS_ENCODER_BATCH_LATENCY.observe(batch_duration)
+            logger.info(f"CE Batch latency: {batch_duration:.3f}s")
             
         return all_scores
 
@@ -129,18 +119,18 @@ class ONNXCrossEncoder:
         if not candidates:
             return []
             
-        # Lightweight pre-filter step
+        # Lightweight pre-filter step (avoid in-place mutation of caller's list)
         if all("score" in cand for cand in candidates):
-            candidates.sort(key=lambda x: x.get("score", 0.0), reverse=True)
+            candidates = sorted(candidates, key=lambda x: x.get("score", 0.0), reverse=True)
             
         ce_limit = getattr(settings, 'MAX_CANDIDATES_CE', 800)
         ce_candidates = candidates[:ce_limit]
         num_cands = len(ce_candidates)
             
-        career_pairs = [(query, cand.get("career_text", "")) for cand in ce_candidates]
-        skill_pairs = [(query, cand.get("skills_text", "")) for cand in ce_candidates]
-        profile_pairs = [(query, cand.get("profile_text", "")) for cand in ce_candidates]
-        edu_pairs = [(query, cand.get("education_text", "")) for cand in ce_candidates]
+        career_pairs = [(str(query or ""), str(cand.get("career_text") or "")) for cand in ce_candidates]
+        skill_pairs = [(str(query or ""), str(cand.get("skills_text") or "")) for cand in ce_candidates]
+        profile_pairs = [(str(query or ""), str(cand.get("profile_text") or "")) for cand in ce_candidates]
+        edu_pairs = [(str(query or ""), str(cand.get("education_text") or "")) for cand in ce_candidates]
         
         # 1. Career
         career_scores = self.predict(career_pairs)
@@ -159,17 +149,24 @@ class ONNXCrossEncoder:
         skill_scores_raw = self.predict(skill_pairs)
         skill_scores = skill_scores_raw + [0.0] * (num_cands - len(skill_scores_raw))
         
+        # Track which components were skipped to renormalize weights
+        skip_profile = False
+        skip_edu = False
+
         # Adaptive degradation based on candidate volume
         if num_cands > 700:
             logger.warning("Adaptive degradation: skipping profile and education scoring (cands > 700)")
             profile_scores = [0.0] * num_cands
             edu_scores = [0.0] * num_cands
+            skip_profile = True
+            skip_edu = True
         else:
             # 3. Profile
             elapsed = time.time() - start_time
             if elapsed > budget * 0.75:
                 logger.warning("CE latency budget critical, skipping profile scoring")
                 profile_scores = [0.0] * num_cands
+                skip_profile = True
                 
                 # Apply secondary degradation for remaining steps
                 min_cands = getattr(settings, 'MIN_CE_CANDIDATES', 300)
@@ -182,12 +179,14 @@ class ONNXCrossEncoder:
             if num_cands > 600:
                 logger.warning("Adaptive degradation: skipping education scoring (cands > 600)")
                 edu_scores = [0.0] * num_cands
+                skip_edu = True
             else:
                 # 4. Education
                 elapsed = time.time() - start_time
                 if elapsed > budget * 0.90:
                     logger.warning("CE latency budget exhausted, skipping education scoring")
                     edu_scores = [0.0] * num_cands
+                    skip_edu = True
                 else:
                     edu_scores_raw = self.predict(edu_pairs)
                     edu_scores = edu_scores_raw + [0.0] * (num_cands - len(edu_scores_raw))
@@ -209,8 +208,19 @@ class ONNXCrossEncoder:
                 "education_fit_ce": e_fit
             })
             
-            # Weighted aggregate score
-            ce_score_avg = (0.4 * c_fit) + (0.3 * s_fit) + (0.2 * p_fit) + (0.1 * e_fit)
+            # Adaptive Weight Normalization
+            weight_sum = 0.4 + 0.3
+            score_sum = (0.4 * c_fit) + (0.3 * s_fit)
+            
+            if not skip_profile:
+                weight_sum += 0.2
+                score_sum += (0.2 * p_fit)
+                
+            if not skip_edu:
+                weight_sum += 0.1
+                score_sum += (0.1 * e_fit)
+            
+            ce_score_avg = score_sum / weight_sum if weight_sum > 0 else 0.0
             cand_out["ce_score_avg"] = ce_score_avg
             
             scored_candidates.append((ce_score_avg, cand_out))
@@ -219,6 +229,6 @@ class ONNXCrossEncoder:
         final_candidates = [cand for _, cand in scored_candidates[:top_k]]
         
         total_duration = time.time() - start_time
-        STAGE_LATENCY.labels(stage="cross_encoder").observe(total_duration)
+        logger.info(f"CrossEncoder reranking took {total_duration:.3f}s")
         
         return final_candidates

@@ -4,8 +4,7 @@ from typing import List, Dict, Any
 import numpy as np
 
 from src.config import settings
-from src.monitoring.metrics import STAGE_LATENCY, FUSION_CANDIDATES
-from src.fusion.features import FeatureAssembler
+from src.scoring.feature_assembler import FeatureAssembler
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +37,7 @@ class AdaptiveFusionRanker:
         self.w_trust = w_trust / total_weight
         self.w_logistics = w_logistics / total_weight
 
-    def rank(self, candidates: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def rank(self, candidates: List[Dict[str, Any]], feature_matrix: np.ndarray = None) -> List[Dict[str, Any]]:
         """
         Executes the adaptive fusion ranking strategy.
         """
@@ -46,10 +45,12 @@ class AdaptiveFusionRanker:
             return []
             
         start_time = time.time()
-        FUSION_CANDIDATES.set(len(candidates))
         
-        # Extract features
-        X = self.feature_assembler.process_batch(candidates)
+        # Extract features dynamically or use provided matrix
+        if feature_matrix is not None:
+            X = feature_matrix
+        else:
+            X = self.feature_assembler.process_batch(candidates)
         
         # 2. Empty Matrix Guard
         if X.size == 0:
@@ -94,9 +95,9 @@ class AdaptiveFusionRanker:
             
         # 5. Deterministic Tie-Breaking
         # Sort descending by final score, then ascending by candidate_id
-        scored_candidates.sort(key=lambda x: (-x["final_score"], x.get("candidate_id", "")))
+        scored_candidates.sort(key=lambda x: (-float(x.get("final_score", 0.0)), str(x.get("candidate_id", ""))))
         
         total_duration = time.time() - start_time
-        STAGE_LATENCY.labels(stage="adaptive_fusion").observe(total_duration)
+        logger.info(f"Adaptive fusion took {total_duration:.3f}s for {len(candidates)} candidates")
         
         return scored_candidates

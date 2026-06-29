@@ -73,7 +73,7 @@ class TrustEngine:
         """
         active_roles = [
             role for role in career_history
-            if role.get("end_date") is None
+            if not role.get("end_date") or str(role.get("end_date")).strip().lower() in ["present", "current"]
         ]
 
         if len(active_roles) >= 2:

@@ -33,7 +33,12 @@ class BlockSelector:
                 score += 1.0
         return float(score)
 
-    def select_blocks(self, parsed_resume: Dict[str, Any], query: str) -> Dict[str, str]:
+    def get_query_terms(self, query: str) -> set:
+        """Precomputes query tokens to avoid redundant regex compilation."""
+        query_terms = set(re.sub(r'[^a-z0-9\s]', '', query.lower()).split())
+        return {t for t in query_terms if t}
+
+    def select_blocks(self, parsed_resume: Dict[str, Any], query_terms: set) -> Dict[str, str]:
         """
         Splits sections into blocks, selects top_k blocks using exact token overlap,
         and restores global context (headline, YOE, skills, certs) per architecture.
@@ -60,11 +65,6 @@ class BlockSelector:
             f"Skills: {', '.join(skill_strings)} | "
             f"Certifications: {', '.join(cert_strings)}"
         )
-        
-        # Tokenize query for overlap using regex normalization
-        query_terms = set(re.sub(r'[^a-z0-9\s]', '', query.lower()).split())
-        # Remove empty tokens
-        query_terms = {t for t in query_terms if t}
         
         def _get_top_text(section_text: str) -> str:
             if not section_text:

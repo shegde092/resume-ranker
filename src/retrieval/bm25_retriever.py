@@ -9,6 +9,7 @@ class BM25Retriever:
     def __init__(self):
         self.bm25_model = None
         self.candidate_ids = []
+        self.corpus = []
         
     def _tokenize(self, text: str) -> List[str]:
         # lowercase text, whitespace split, remove empty tokens
@@ -16,14 +17,16 @@ class BM25Retriever:
         
     def add_candidates(self, documents: List[str], candidate_ids: List[str]):
         """
-        Build the BM25 index.
+        Build the BM25 index cumulatively.
         """
         if not documents:
             return
             
         tokenized_corpus = [self._tokenize(doc) for doc in documents]
-        self.bm25_model = BM25Okapi(tokenized_corpus)
-        self.candidate_ids = list(candidate_ids)
+        self.corpus.extend(tokenized_corpus)
+        self.candidate_ids.extend(candidate_ids)
+        
+        self.bm25_model = BM25Okapi(self.corpus)
         
     def search(self, query: str, top_k: int = 2000) -> Dict[str, float]:
         """

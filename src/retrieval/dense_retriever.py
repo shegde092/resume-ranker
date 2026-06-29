@@ -28,8 +28,8 @@ class DenseRetriever:
         logger.info(f"Encoding {len(documents)} candidates for dense retrieval...")
         embeddings = self.model.encode(documents, normalize_embeddings=True)
         
-        self.index.add(np.array(embeddings, dtype=np.float32))
         self.candidate_ids.extend(candidate_ids)
+        self.index.add(np.array(embeddings, dtype=np.float32))
         
     def search(self, query: str, top_k: int = 2000) -> Dict[str, float]:
         """
