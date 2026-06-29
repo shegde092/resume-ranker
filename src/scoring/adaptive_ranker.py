@@ -82,6 +82,14 @@ class AdaptiveFusionRanker:
             f_score = float(final_scores[i])
             t_score = float(trust_scores[i])
             
+            if i < 3:
+                print(f"=== AdaptiveRanker Debug: Candidate {cand.get('candidate_id', 'unknown')} ===")
+                print(f"CE: {ce_scores[i]:.4f} * {self.w_ce:.2f} = {ce_scores[i]*self.w_ce:.4f}")
+                print(f"RRF: {rrf_scores[i]:.4f} * {self.w_rrf:.2f} = {rrf_scores[i]*self.w_rrf:.4f}")
+                print(f"Trust: {t_score:.4f} * {self.w_trust:.2f} = {t_score*self.w_trust:.4f}")
+                print(f"Logistics: {logistics_scores[i]:.4f} * {self.w_logistics:.2f} = {logistics_scores[i]*self.w_logistics:.4f}")
+                print(f"Raw Final: {f_score:.4f}")
+            
             # 3. Smooth Trust Penalty
             if t_score < 0.4:
                 penalty_multiplier = max(0.7, 1.0 - ((0.4 - t_score) * 0.75))

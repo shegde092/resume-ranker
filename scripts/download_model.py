@@ -5,9 +5,9 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-MODEL_URL = "https://huggingface.co/Xenova/all-MiniLM-L6-v2/resolve/main/onnx/model_quantized.onnx"
+MODEL_URL = "https://huggingface.co/Xenova/ms-marco-MiniLM-L-6-v2/resolve/main/onnx/model_quantized.onnx"
 MODEL_DIR = "models"
-MODEL_PATH = os.path.join(MODEL_DIR, "minilm_l6_v2_int8.onnx")
+MODEL_PATH = os.path.join(MODEL_DIR, "ms_marco_minilm_l6_v2_int8.onnx")
 
 def download_file(url, dest_path):
     if os.path.exists(dest_path):

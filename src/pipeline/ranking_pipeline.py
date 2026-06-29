@@ -66,6 +66,20 @@ class RankingPipeline:
                 for exp in cand.get("career_history", []):
                     text_parts.append(str(exp.get("title", "")))
                     text_parts.append(str(exp.get("description", "")))
+                    
+                if not text_parts:
+                    # Fallback for flat schemas or missing keys
+                    if "raw_text" in cand:
+                        text_parts.append(str(cand["raw_text"]))
+                    elif "resume_text" in cand:
+                        text_parts.append(str(cand["resume_text"]))
+                    else:
+                        # Extract all possible string content as a final safety net
+                        for v in cand.values():
+                            if isinstance(v, str):
+                                text_parts.append(v)
+                            elif isinstance(v, list):
+                                text_parts.append(" ".join(str(item) for item in v))
                 
                 new_documents.append(" ".join(text_parts))
                 new_candidate_ids.append(cand_id)

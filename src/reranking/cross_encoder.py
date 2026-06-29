@@ -11,7 +11,7 @@ from src.config import settings
 logger = logging.getLogger(__name__)
 
 class ONNXCrossEncoder:
-    def __init__(self, model_path: str = "models/minilm_l6_v2_int8.onnx", model_name: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"):
+    def __init__(self, model_path: str = "models/ms_marco_minilm_l6_v2_int8.onnx", model_name: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"):
         """
         Initialize ONNX INT8 cross encoder for fast CPU inference.
         """
@@ -89,12 +89,23 @@ class ONNXCrossEncoder:
                 logits = np.clip(logits, -50, 50)
                 
                 # Convert logits to probabilities
-                if logits.ndim > 1 and logits.shape[1] == 1:
+                if logits.ndim > 2:
+                    raise ValueError(f"Expected 1D or 2D logits from cross-encoder, got {logits.ndim}D tensor. Ensure you have loaded a true sequence classification model, not a feature extractor.")
+                elif logits.ndim > 1 and logits.shape[1] == 1:
                     scores = 1 / (1 + np.exp(-logits.flatten()))
                 elif logits.ndim > 1:
                     scores = 1 / (1 + np.exp(-logits[:, 1]))
                 else:
                     scores = 1 / (1 + np.exp(-logits))
+                    
+                if i == 0:
+                    print("=== CrossEncoder Predict Debug ===")
+                    print(f"Logits shape: {logits.shape}")
+                    print(f"Raw logits sample (first element): {logits[0, :3] if logits.ndim > 1 else logits[:3]}")
+                    if logits.ndim == 3:
+                        print(f"Pseudo-logits sample (mean of CLS): {pseudo_logits[:3]}")
+                    print(f"Final normalized scores sample: {scores[:3]}")
+                    print("==================================")
                     
                 all_scores.extend(scores.tolist())
 
@@ -107,6 +118,21 @@ class ONNXCrossEncoder:
             logger.info(f"CE Batch latency: {batch_duration:.3f}s")
             
         return all_scores
+
+    def _safe_scalar(self, value):
+        import numpy as np
+
+        if isinstance(value, list):
+            if len(value) == 0:
+                return 0.0
+            value = value[0]
+
+        if isinstance(value, np.ndarray):
+            if value.size == 0:
+                return 0.0
+            value = float(np.mean(value))
+
+        return float(value)
 
     def rerank(self, query: str, candidates: List[Dict[str, Any]], top_k: int = 500) -> List[Dict[str, Any]]:
         """
@@ -192,12 +218,21 @@ class ONNXCrossEncoder:
                     edu_scores = edu_scores_raw + [0.0] * (num_cands - len(edu_scores_raw))
         
         scored_candidates = []
+        
+        if len(career_scores) > 0:
+            print("=== DEBUG START ===")
+            print(type(career_scores))
+            print(len(career_scores))
+            print(type(career_scores[0]))
+            print(career_scores[:3])
+            print("=== DEBUG END ===")
+            
         for i, cand in enumerate(ce_candidates):
             # Safe score indexing
-            c_fit = float(career_scores[i]) if i < len(career_scores) else 0.0
-            s_fit = float(skill_scores[i]) if i < len(skill_scores) else 0.0
-            p_fit = float(profile_scores[i]) if i < len(profile_scores) else 0.0
-            e_fit = float(edu_scores[i]) if i < len(edu_scores) else 0.0
+            c_fit = self._safe_scalar(career_scores[i]) if i < len(career_scores) else 0.0
+            s_fit = self._safe_scalar(skill_scores[i]) if i < len(skill_scores) else 0.0
+            p_fit = self._safe_scalar(profile_scores[i]) if i < len(profile_scores) else 0.0
+            e_fit = self._safe_scalar(edu_scores[i]) if i < len(edu_scores) else 0.0
             
             # Preserve existing candidate fields
             cand_out = cand.copy()
