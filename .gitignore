@@ -1,1 +1,9 @@
-candidates.jsonl
+venv/
+__pycache__/
+*.pyc
+artifacts/
+models/
+data/
+candidates/
+candidates.parquet
+.pytest_cache/

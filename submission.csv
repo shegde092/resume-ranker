@@ -1,101 +1,101 @@
 candidate_id,rank,score,reasoning
-CAND_0002025,1,1.0157931228191182,"5.9 years of AI search and ranking experience with expertise in diffusion models, faiss. Demonstrated impact where they shipped features as a Senior AI Engineer at Apple. Available immediately."
-CAND_0046064,2,1.0033912675263148,"8.9 years of AI search and ranking experience with expertise in python, image classification. Demonstrated impact where they fine-tuned llama-2-7b and mistral-7b variants using lora and qlora for domain-specific candidate-jd matching. Available immediately."
-CAND_0008295,3,0.997558756786306,"6.5 years of AI search and ranking experience with expertise in bm25, kubernetes. Demonstrated impact where they shipped features as a AI Research Engineer at Razorpay. Note: candidate has a 45-day notice period."
-CAND_0020708,4,0.9946486629892988,"4.2 years of AI search and ranking experience with expertise in tally, nlp. Demonstrated impact where they developed a semantic search feature for an internal knowledge base of ~500k documents. Available immediately."
-CAND_0052682,5,0.9900189963314141,"6.6 years of AI search and ranking experience with expertise in statistical modeling, qlora. Demonstrated impact where they shipped features as a NLP Engineer at Aganitha. Available immediately."
-CAND_0096172,6,0.9881844032557565,"5.2 years of AI search and ranking experience with expertise in opensearch, haystack. Demonstrated impact where they developed a semantic search feature for an internal knowledge base of ~500k documents. Note: candidate has a 45-day notice period and is not actively looking."
-CAND_0055905,7,0.987691335086343,"8.1 years of AI search and ranking experience with expertise in elasticsearch, asr. Demonstrated impact where they owned the design and rollout of a large-scale semantic search system serving an internal corpus of 35m+ items. Available immediately."
-CAND_0079387,8,0.9875378436183724,"6.9 years of AI search and ranking experience with expertise in scikit-learn, recommendation systems. Demonstrated impact where they shipped features as a AI Engineer at Microsoft. Available immediately."
-CAND_0024620,9,0.9862422085738485,"5.9 years of AI search and ranking experience with expertise in statistical modeling, object detection. Demonstrated impact where they shipped features as a AI Engineer at PharmEasy. Note: candidate has a 45-day notice period."
-CAND_0076163,10,0.9837958559183078,"6.9 years of AI search and ranking experience with expertise in weaviate, langchain. Demonstrated impact where they shipped features as a NLP Engineer at Ola. Note: candidate has a 60-day notice period."
-CAND_0040887,11,0.9806607461955288,"4.7 years of AI search and ranking experience with expertise in reinforcement learning, computer vision. Demonstrated impact where they developed a semantic search feature for an internal knowledge base of ~500k documents. Available immediately."
-CAND_0088025,12,0.9777420811392352,"8.6 years of AI search and ranking experience with expertise in pinecone, qlora. Demonstrated impact where they shipped features as a Staff Machine Learning Engineer at Yellow.ai. Note: candidate has a 90-day notice period."
-CAND_0098952,13,0.9744435469354433,"5.5 years of AI search and ranking experience with expertise in airflow, recommendation systems. Demonstrated impact where they worked on time-series forecasting models for supply-chain demand prediction at a logistics company. Note: candidate has a 45-day notice period."
-CAND_0008239,14,0.9714168492771991,"4.0 years of AI search and ranking experience with expertise in milvus, computer vision. Demonstrated impact where they shipped features as a AI Engineer at Apple. Available immediately."
-CAND_0064326,15,0.9699809015406764,"7.6 years of AI search and ranking experience with expertise in scikit-learn, pytorch. Demonstrated impact where they shipped features as a Search Engineer at Sarvam AI. Note: candidate has a 45-day notice period."
-CAND_0021491,16,0.9695699914416411,"6.1 years of AI search and ranking experience with expertise in recommendation systems, docker. Demonstrated impact where they shipped features as a AI Research Engineer at Wysa. Note: candidate has a 90-day notice period."
-CAND_0069905,17,0.969001942140632,"6.6 years of AI search and ranking experience with expertise in flask, redux. Demonstrated impact where they developed a semantic search feature for an internal knowledge base of ~500k documents. Note: candidate has a 90-day notice period."
-CAND_0062247,18,0.968702030942334,"7.3 years of AI search and ranking experience with expertise in image classification, opencv. Demonstrated impact where they developed a semantic search feature for an internal knowledge base of ~500k documents. Available immediately."
-CAND_0030348,19,0.9671702720966839,"4.5 years of AI search and ranking experience with expertise in llamaindex, deep learning. Demonstrated impact where they developed a semantic search feature for an internal knowledge base of ~500k documents. Note: candidate has a 45-day notice period."
-CAND_0030031,20,0.9660631782935061,"5.7 years of AI search and ranking experience with expertise in information retrieval, pytorch. Demonstrated impact where they shipped features as a AI Engineer at Microsoft. Note: candidate is not actively looking."
-CAND_0068351,21,0.9642076087194085,"6.4 years of AI search and ranking experience with expertise in pgvector, deep learning. Demonstrated impact where they shipped features as a Lead AI Engineer at Sarvam AI. Note: candidate is not actively looking."
-CAND_0030953,22,0.9635863352724423,"7.8 years of AI search and ranking experience with expertise in tts, mlops. Demonstrated impact where they trained and shipped multiple ranking models for our product's discovery feed using xgboost and lightgbm. Note: candidate has a 45-day notice period and is not actively looking."
-CAND_0044222,23,0.9629094388344364,"7.7 years of AI search and ranking experience with expertise in vector search, llamaindex. Demonstrated impact where they developed a semantic search feature for an internal knowledge base of ~500k documents. Note: candidate has a 60-day notice period."
-CAND_0008425,24,0.9615704392704933,"7.8 years of AI search and ranking experience with expertise in learning to rank, qdrant. Demonstrated impact where they owned the design and rollout of a large-scale semantic search system serving an internal corpus of 35m+ items. Note: candidate has a 90-day notice period."
-CAND_0059017,25,0.9598032979411915,"6.8 years of AI search and ranking experience with expertise in speech recognition, sentence transformers. Demonstrated impact where they shipped features as a AI Research Engineer at PhonePe. Note: candidate has a 90-day notice period."
-CAND_0012957,26,0.9594072119146209,"4.9 years of AI search and ranking experience with expertise in rag, peft. Demonstrated impact where they shipped features as a Search Engineer at Razorpay. Note: candidate has a 120-day notice period and is not actively looking."
-CAND_0050454,27,0.9589905224339674,"6.8 years of AI search and ranking experience with expertise in pytorch, langchain. Demonstrated impact where they developed a semantic search feature for an internal knowledge base of ~500k documents. Available immediately."
-CAND_0081686,28,0.9587715155926251,"6.0 years of AI search and ranking experience with expertise in machine learning, kubeflow. Demonstrated impact where they shipped features as a Search Engineer at Netflix. Note: candidate has a 60-day notice period and is not actively looking."
-CAND_0077337,29,0.9586397359083618,"7.0 years of AI search and ranking experience with expertise in gans, semantic search. Demonstrated impact where they shipped features as a Staff Machine Learning Engineer at Paytm. Note: candidate has a 60-day notice period."
-CAND_0051630,30,0.9577982360606825,"6.0 years of AI search and ranking experience with expertise in elasticsearch, hugging face transformers. Demonstrated impact where they shipped features as a Machine Learning Engineer at Razorpay. Note: candidate has a 90-day notice period and is not actively looking."
-CAND_0032807,31,0.9571678029516881,"4.2 years of AI search and ranking experience with expertise in opensearch, opencv. Demonstrated impact where they implemented a rag-based customer support chatbot integrated with our existing ticketing system. Note: candidate has a 90-day notice period."
-CAND_0046526,32,0.9545463856559537,"5.5 years of AI search and ranking experience with expertise in tensorflow, angular. Demonstrated impact where they shipped features as a ML Engineer at Ola. Note: candidate has a 90-day notice period."
-CAND_0054123,33,0.9522688037682094,"4.7 years of AI search and ranking experience with expertise in langchain, pgvector. Demonstrated impact where they shipped features as a Applied ML Engineer at Meta. Note: candidate has a 60-day notice period and is not actively looking."
-CAND_0070398,34,0.9487114049461478,"7.2 years of AI search and ranking experience with expertise in image classification, data science. Demonstrated impact where they developed a semantic search feature for an internal knowledge base of ~500k documents. Note: candidate has a 120-day notice period."
-CAND_0081852,35,0.9476915432435693,"5.9 years of AI search and ranking experience with expertise in salesforce crm, semantic search. Demonstrated impact where they implemented a rag-based customer support chatbot integrated with our existing ticketing system. Note: candidate has a 45-day notice period."
-CAND_0080315,36,0.947446477742705,"4.1 years of AI search and ranking experience with expertise in langchain, object detection. Demonstrated impact where they shipped features as a AI Research Engineer at Sarvam AI. Available immediately."
-CAND_0054318,37,0.9466654906435921,"3.5 years of AI search and ranking experience with expertise in diffusion models, speech recognition. Demonstrated impact where they contributed to ml feature engineering and model deployment for a fraud-detection product. Note: candidate has a 60-day notice period."
-CAND_0065195,38,0.9459430835829317,"5.1 years of AI search and ranking experience with expertise in llms, bentoml. Demonstrated impact where they implemented a rag-based customer support chatbot integrated with our existing ticketing system. Note: candidate has a 45-day notice period."
-CAND_0012632,39,0.9452668828127813,"6.0 years of AI search and ranking experience with expertise in project management, mlops. Demonstrated impact where they shipped features as a AI Specialist at Razorpay. Note: candidate has a 120-day notice period and is not actively looking."
-CAND_0077067,40,0.9429334970398817,"5.4 years of AI search and ranking experience with expertise in statistical modeling, image classification. Demonstrated impact where they contributed to ml feature engineering and model deployment for a fraud-detection product. Note: candidate has a 90-day notice period."
-CAND_0064904,41,0.9421119450856814,"4.9 years of AI search and ranking experience with expertise in embeddings, hugging face transformers. Demonstrated impact where they shipped features as a AI Engineer at LinkedIn. Note: candidate has a 90-day notice period."
-CAND_0053591,42,0.9412577696949085,"5.3 years of AI search and ranking experience with expertise in langchain, reinforcement learning. Demonstrated impact where they trained and shipped multiple ranking models for our product's discovery feed using xgboost and lightgbm. Note: candidate has a 60-day notice period."
-CAND_0039308,43,0.9395424418785889,"5.6 years of AI search and ranking experience with expertise in seo, asr. Demonstrated impact where they shipped features as a AI Research Engineer at BYJU'S. Note: candidate has a 120-day notice period and is not actively looking."
-CAND_0099401,44,0.9392310871048881,"7.7 years of AI search and ranking experience with expertise in bm25, embeddings. Demonstrated impact where they shipped features as a NLP Engineer at Dream11. Note: candidate has a 90-day notice period and is not actively looking."
-CAND_0083307,45,0.9390203913093234,"7.8 years of AI search and ranking experience with expertise in opencv, scikit-learn. Demonstrated impact where they implemented a rag-based customer support chatbot integrated with our existing ticketing system. Note: candidate has a 120-day notice period."
-CAND_0011687,46,0.9384430854705768,"7.8 years of AI search and ranking experience with expertise in tensorflow, opensearch. Demonstrated impact where they shipped features as a Senior NLP Engineer at Niramai. Available immediately."
-CAND_0061175,47,0.9379168856557478,"6.7 years of AI search and ranking experience with expertise in python, milvus. Demonstrated impact where they shipped features as a AI Research Engineer at Haptik. Note: candidate has a 120-day notice period."
-CAND_0076251,48,0.9373904387585743,"7.6 years of AI search and ranking experience with expertise in fine-tuning llms, reinforcement learning. Demonstrated impact where they developed a semantic search feature for an internal knowledge base of ~500k documents. Note: candidate has a 60-day notice period."
-CAND_0075249,49,0.9372421814696692,"6.2 years of AI search and ranking experience with expertise in sentence transformers, milvus. Demonstrated impact where they shipped features as a Applied ML Engineer at Zomato. Note: candidate has a 45-day notice period."
-CAND_0009024,50,0.9354946929444905,"5.2 years of AI search and ranking experience with expertise in yolo, qdrant. Demonstrated impact where they shipped features as a Search Engineer at Google. Available immediately."
-CAND_0043936,51,0.9348184448427885,"3.7 years of AI search and ranking experience with expertise in milvus, machine learning. Demonstrated impact where they shipped features as a AI Research Engineer at Zomato. Note: candidate has a 90-day notice period."
-CAND_0046525,52,0.9345624640473811,"6.1 years of AI search and ranking experience with expertise in elasticsearch, redux. Demonstrated impact where they led the migration from keyword-based to embedding-based search across a 30m+ candidate corpus over 8 months. Note: candidate has a 60-day notice period."
-CAND_0049896,53,0.9342232662349781,"7.3 years of AI search and ranking experience with expertise in postgresql, langchain. Demonstrated impact where they implemented a rag-based customer support chatbot integrated with our existing ticketing system. Note: candidate has a 90-day notice period."
-CAND_0037566,54,0.9341912210765861,"6.9 years of AI search and ranking experience with expertise in pinecone, time series. Demonstrated impact where they implemented a rag-based customer support chatbot integrated with our existing ticketing system. Available immediately."
-CAND_0098454,55,0.9340842149420694,"6.6 years of AI search and ranking experience with expertise in vector search, mlops. Demonstrated impact where they contributed to ml feature engineering and model deployment for a fraud-detection product. Note: candidate has a 60-day notice period."
-CAND_0049771,56,0.933888708144365,"5.0 years of AI search and ranking experience with expertise in python, opencv. Demonstrated impact where they shipped features as a AI Research Engineer at Wysa. Note: candidate has a 60-day notice period and is not actively looking."
-CAND_0051004,57,0.9337292278941549,"4.7 years of AI search and ranking experience with expertise in mlflow, embeddings. Demonstrated impact where they implemented a rag-based customer support chatbot integrated with our existing ticketing system. Available immediately."
-CAND_0099806,58,0.9332873928218495,"4.6 years of AI search and ranking experience with expertise in lora, opencv. Demonstrated impact where they trained and shipped multiple ranking models for our product's discovery feed using xgboost and lightgbm. Available immediately."
-CAND_0042029,59,0.9324943845626916,"6.5 years of AI search and ranking experience with expertise in yolo, pytorch. Demonstrated impact where they trained and shipped multiple ranking models for our product's discovery feed using xgboost and lightgbm. Note: candidate has a 45-day notice period and is not actively looking."
-CAND_0035879,60,0.930475274759252,"4.5 years of AI search and ranking experience with expertise in ci/cd, vue.js. Demonstrated impact where they shipped features as a AI Research Engineer at Krutrim. Note: candidate has a 120-day notice period."
-CAND_0096104,61,0.9304463887800785,"7.0 years of AI search and ranking experience with expertise in bm25, tts. Demonstrated impact where they shipped features as a AI Specialist at Yellow.ai. Available immediately."
-CAND_0009981,62,0.9299381090896031,"3.4 years of AI search and ranking experience with expertise in python, weaviate. Demonstrated impact where they shipped features as a AI Specialist at Wipro. Note: candidate has a 60-day notice period and is not actively looking."
-CAND_0094728,63,0.9296787330405614,"6.5 years of AI search and ranking experience with expertise in opensearch, data science. Demonstrated impact where they shipped features as a AI Specialist at Swiggy. Note: candidate is not actively looking."
-CAND_0068811,64,0.9295732961575451,"8.0 years of AI search and ranking experience with expertise in data science, vector search. Demonstrated impact where they shipped features as a Applied ML Engineer at Freshworks. Available immediately."
-CAND_0073007,65,0.9285121244380883,"5.8 years of AI search and ranking experience with expertise in milvus, bentoml. Demonstrated impact where they shipped features as a AI Specialist at Aganitha. Note: candidate has a 60-day notice period."
-CAND_0075138,66,0.9273642690024619,"4.6 years of AI search and ranking experience with expertise in bentoml, cnn. Demonstrated impact where they shipped features as a AI Research Engineer at Infosys. Note: candidate has a 60-day notice period."
-CAND_0018499,67,0.9271555277246586,"7.2 years of AI search and ranking experience with expertise in deep learning, weaviate. Demonstrated impact where they built a rag-based ranking pipeline serving 50m+ queries per month for an internal recruiter-facing search product. Available immediately."
-CAND_0074225,68,0.9269435116425715,"4.3 years of AI search and ranking experience with expertise in apache beam, statistical modeling. Demonstrated impact where they trained and shipped multiple ranking models for our product's discovery feed using xgboost and lightgbm. Note: candidate has a 120-day notice period."
-CAND_0045250,69,0.9263939951491673,"6.6 years of AI search and ranking experience with expertise in sentence transformers, milvus. Demonstrated impact where they trained and shipped multiple ranking models for our product's discovery feed using xgboost and lightgbm. Note: candidate is not actively looking."
-CAND_0019845,70,0.9257703509036477,"3.4 years of AI search and ranking experience with expertise in data science, reinforcement learning. Demonstrated impact where they shipped features as a AI Specialist at Zomato. Note: candidate is not actively looking."
-CAND_0060054,71,0.9248985551945159,"6.4 years of AI search and ranking experience with expertise in diffusion models, tensorflow. Demonstrated impact where they developed a semantic search feature for an internal knowledge base of ~500k documents. Note: candidate is not actively looking."
-CAND_0006567,72,0.9200279768083472,"7.9 years of AI search and ranking experience with expertise in speech recognition, scikit-learn. Demonstrated impact where they shipped features as a Senior AI Engineer at Meta. Note: candidate has a 60-day notice period."
-CAND_0007631,73,0.9189974133783179,"5.2 years of AI search and ranking experience with expertise in peft, diffusion models. Demonstrated impact where they shipped features as a AI Specialist at Saarthi.ai. Note: candidate has a 45-day notice period."
-CAND_0079284,74,0.9189044391289529,"4.9 years of AI search and ranking experience with expertise in recommendation systems, scikit-learn. Demonstrated impact where they trained and shipped multiple ranking models for our product's discovery feed using xgboost and lightgbm. Note: candidate is not actively looking."
-CAND_0060257,75,0.9186131876224362,"5.8 years of AI search and ranking experience with expertise in recommendation systems, diffusion models. Demonstrated impact where they shipped features as a AI Specialist at Paytm. Note: candidate has a 60-day notice period."
-CAND_0043228,76,0.9180635774812651,"6.8 years of AI search and ranking experience with expertise in bigquery, nlp. Demonstrated impact where they shipped features as a Applied ML Engineer at Zoho. Note: candidate is not actively looking."
-CAND_0091909,77,0.9176709874121625,"6.9 years of AI search and ranking experience with expertise in llms, image classification. Demonstrated impact where they shipped features as a Machine Learning Engineer at Rephrase.ai. Note: candidate has a 45-day notice period."
-CAND_0094759,78,0.9174885080999045,"8.6 years of AI search and ranking experience with expertise in prompt engineering, scikit-learn. Demonstrated impact where they led the migration from keyword-based to embedding-based search across a 30m+ candidate corpus over 8 months. Note: candidate is not actively looking."
-CAND_0070485,79,0.9169581299866223,"6.4 years of AI search and ranking experience with expertise in kubernetes, haystack. Demonstrated impact where they developed a semantic search feature for an internal knowledge base of ~500k documents. Note: candidate has a 120-day notice period."
-CAND_0024878,80,0.9160236116889973,"5.7 years of AI search and ranking experience with expertise in bm25, pgvector. Demonstrated impact where they contributed to ml feature engineering and model deployment for a fraud-detection product. Note: candidate has a 60-day notice period."
-CAND_0022852,81,0.9158610472764535,"5.4 years of AI search and ranking experience with expertise in tensorflow, pinecone. Demonstrated impact where they shipped features as a AI Research Engineer at Zomato. Note: candidate has a 120-day notice period and is not actively looking."
-CAND_0071974,82,0.9157689479826765,"7.8 years of AI search and ranking experience with expertise in lora, learning to rank. Demonstrated impact where they shipped features as a Senior AI Engineer at Netflix. Note: candidate has a 45-day notice period."
-CAND_0087630,83,0.914603489199584,"7.2 years of AI search and ranking experience with expertise in data science, gans. Demonstrated impact where they shipped features as a AI Engineer at Vedantu. Note: candidate is not actively looking."
-CAND_0093912,84,0.9145372553775262,"5.3 years of AI search and ranking experience with expertise in feature engineering, sap. Demonstrated impact where they shipped features as a Senior Data Scientist at Razorpay. Available immediately."
-CAND_0005260,85,0.9121982872606447,"5.2 years of AI search and ranking experience with expertise in statistical modeling, mlops. Demonstrated impact where they fine-tuned llama-2-7b and mistral-7b variants using lora and qlora for domain-specific candidate-jd matching. Note: candidate has a 60-day notice period and is not actively looking."
-CAND_0018722,86,0.9121568318817361,"6.6 years of AI search and ranking experience with expertise in data science, weaviate. Demonstrated impact where they developed a semantic search feature for an internal knowledge base of ~500k documents. Note: candidate has a 90-day notice period."
-CAND_0058300,87,0.9116930592400789,"4.5 years of AI search and ranking experience with expertise in mlflow, python. Demonstrated impact where they shipped features as a AI Research Engineer at Wipro. Note: candidate has a 90-day notice period."
-CAND_0057563,88,0.9116924872801213,"6.8 years of AI search and ranking experience with expertise in deep learning, speech recognition. Demonstrated impact where they shipped features as a NLP Engineer at Locobuzz. Note: candidate has a 60-day notice period and is not actively looking."
-CAND_0018888,89,0.9116461219111749,"6.5 years of AI search and ranking experience with expertise in diffusion models, gans. Demonstrated impact where they shipped features as a AI Research Engineer at Razorpay. Note: candidate is not actively looking."
-CAND_0042506,90,0.9114557218389818,"4.2 years of AI search and ranking experience with expertise in peft, tts. Demonstrated impact where they implemented a rag-based customer support chatbot integrated with our existing ticketing system. Available immediately."
-CAND_0007460,91,0.9112507216877668,"4.7 years of AI search and ranking experience with expertise in langchain, peft. Demonstrated impact where they shipped features as a AI Engineer at Salesforce. Note: candidate has a 120-day notice period."
-CAND_0065878,92,0.9109964985733185,"7.8 years of AI search and ranking experience with expertise in scikit-learn, rag. Demonstrated impact where they shipped features as a Senior Data Scientist at Niramai. Available immediately."
-CAND_0024466,93,0.9108795422551144,"5.2 years of AI search and ranking experience with expertise in recommendation systems, pgvector. Demonstrated impact where they shipped features as a Search Engineer at PharmEasy. Note: candidate has a 120-day notice period."
-CAND_0089197,94,0.910660571452417,"3.1 years of AI search and ranking experience with expertise in cnn, feature engineering. Demonstrated impact where they shipped features as a AI Specialist at Wipro. Note: candidate has a 60-day notice period and is not actively looking."
-CAND_0031593,95,0.910546184402172,"7.8 years of AI search and ranking experience with expertise in haystack, opencv. Demonstrated impact where they shipped features as a Search Engineer at Genpact AI. Note: candidate has a 90-day notice period."
-CAND_0015578,96,0.9103946646022851,"5.4 years of AI search and ranking experience with expertise in diffusion models, embeddings. Demonstrated impact where they implemented a rag-based customer support chatbot integrated with our existing ticketing system. Note: candidate has a 90-day notice period."
-CAND_0011432,97,0.9101325569190082,"7.6 years of AI search and ranking experience with expertise in haystack, mlops. Demonstrated impact where they trained and shipped multiple ranking models for our product's discovery feed using xgboost and lightgbm. Note: candidate has a 60-day notice period."
-CAND_0076587,98,0.9100583248146124,"4.9 years of AI search and ranking experience with expertise in dbt, asr. Demonstrated impact where they contributed to ml feature engineering and model deployment for a fraud-detection product. Available immediately."
-CAND_0002793,99,0.9097094732414035,"5.5 years of AI search and ranking experience with expertise in learning to rank, diffusion models. Demonstrated impact where they worked on time-series forecasting models for supply-chain demand prediction at a logistics company. Note: candidate is not actively looking."
-CAND_0052706,100,0.9094554944637163,"5.1 years of AI search and ranking experience with expertise in mlflow, pinecone. Demonstrated impact where they contributed to ml feature engineering and model deployment for a fraud-detection product. Note: candidate has a 60-day notice period."
+CAND_0008809,1,0.5640084743499756,Good semantic fit.
+CAND_0080500,2,0.05163357853889466,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0094758,3,0.05163357853889466,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0050015,4,0.05077532529830933,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0069121,5,0.05077532529830933,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0050051,6,0.049944317340850836,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0099598,7,0.049944317340850836,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0045832,8,0.04915485680103302,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0031500,9,0.049139279127120974,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0050045,10,0.04835900664329529,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0064724,11,0.04835900664329529,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0046653,12,0.047602382302284245,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0051500,13,0.047602382302284245,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0008515,14,0.04717189371585846,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0001586,15,0.04686834216117859,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0063183,16,0.04686834216117859,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0007088,17,0.04615589082241059,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0058334,18,0.04615589082241059,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0085908,19,0.04572403132915497,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0008318,20,0.04546409249305725,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0082852,21,0.04546409249305725,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0045708,22,0.04479205906391144,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0049305,23,0.04413895308971405,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0089500,24,0.04413895308971405,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0008618,25,0.04350399374961853,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0081211,26,0.04350399374961853,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0031808,27,0.042886427044868475,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0076889,28,0.042886427044868475,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0008585,29,0.04228555858135224,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0008018,30,0.04214798510074616,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0008615,31,0.041700705885887146,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0035435,32,0.041700705885887146,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0001880,33,0.041131243109703064,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0055714,34,0.041131243109703064,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0080518,35,0.04057657420635224,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0081250,36,0.04057657420635224,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0073860,37,0.040036129951477054,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0047500,38,0.03950936496257782,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0068666,39,0.03950936496257782,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0027993,40,0.038995766639709474,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0050083,41,0.03849485516548157,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0067170,42,0.03849485516548157,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0050011,43,0.03800615668296814,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0055350,44,0.03800615668296814,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0007318,45,0.037529236078262335,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0052082,46,0.037529236078262335,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0080868,47,0.037105226516723634,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0001388,48,0.03706367313861847,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0018765,49,0.03706367313861847,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0007015,50,0.03660906255245209,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0068398,51,0.03660906255245209,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0025500,52,0.036165025830268864,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0086050,53,0.036165025830268864,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0006418,54,0.03573119044303894,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0018282,55,0.03573119044303894,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0029021,56,0.03530722260475159,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0088708,57,0.03530722260475159,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0007858,58,0.0348927766084671,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0016738,59,0.0348927766084671,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0053208,60,0.03448754549026489,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0025273,61,0.034091219305992126,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0050500,62,0.034091219305992126,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0031885,63,0.033703505992889404,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0089646,64,0.033703505992889404,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0085649,65,0.033475625514984134,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0008138,66,0.03332413136959076,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0028038,67,0.03332413136959076,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0036716,68,0.032952827215194706,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0064858,69,0.032952827215194706,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0008070,70,0.03258934319019318,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0029426,71,0.03258934319019318,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0008803,72,0.03245790898799896,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0031708,73,0.032233431935310364,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0064636,74,0.032233431935310364,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0008878,75,0.03188485503196716,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0067633,76,0.03188485503196716,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0076963,77,0.03154339492321014,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0084545,78,0.03154339492321014,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0045805,79,0.03120883405208588,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0052137,80,0.03120883405208588,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0000088,81,0.03088096380233765,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0008598,82,0.030559584498405457,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0065352,83,0.030559584498405457,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0017129,84,0.030244508385658266,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0045859,85,0.030244508385658266,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0027789,86,0.029935550689697266,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0090500,87,0.029935550689697266,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0013517,88,0.029632535576820374,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0084581,89,0.029632535576820374,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0085458,90,0.029618835449218752,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0027096,91,0.0293352872133255,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0064808,92,0.0293352872133255,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0045018,93,0.02908497452735901,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0007808,94,0.029043650627136233,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0029050,95,0.029043650627136233,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0030766,96,0.02875746488571167,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0048500,97,0.02875746488571167,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0017459,98,0.028476577997207642,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0083151,99,0.028476577997207642,Partial skill overlap; Major concern: Duplicate candidate profile detected.
+CAND_0008517,100,0.028200843930244447,Partial skill overlap; Major concern: Duplicate candidate profile detected.

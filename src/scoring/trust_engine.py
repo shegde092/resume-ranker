@@ -1,25 +1,18 @@
 import logging
 from typing import Dict, Any, List
 
-import numpy as np
-import pandas as pd
-from sklearn.cluster import KMeans
-from sklearn.metrics import silhouette_score, davies_bouldin_score
-from scipy.spatial.distance import cdist
+
 
 logger = logging.getLogger(__name__)
 
 
 class TrustEngine:
     def __init__(self):
-        self.template_centroids = None
-        self.anomaly_threshold = 3.0
-        self.optimal_k = 44  # Fixed architecture constraint
+        pass
 
     def evaluate(
         self,
-        parsed_resume: Dict[str, Any],
-        vector_features: np.ndarray = None
+        parsed_resume: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
         Evaluate trust score using soft penalties.
@@ -36,11 +29,7 @@ class TrustEngine:
         education = parsed_resume.get("education", [])
         redrob_signals = parsed_resume.get("redrob_signals", {})
 
-        # 1. Overlapping jobs
-        overlap_penalty = self._check_overlaps(career_history)
-        if overlap_penalty > 0:
-            penalties.append("overlapping_fulltime_roles")
-            base_trust -= overlap_penalty
+
 
         # 2. Suspicious education duration
         education_penalty = self._check_education_duration(education)
@@ -48,13 +37,19 @@ class TrustEngine:
             penalties.append("suspicious_degree_duration")
             base_trust -= education_penalty
 
-        # 3. Career template anomaly
-        anomaly_penalty = self._detect_template_anomaly(vector_features)
-        if anomaly_penalty > 0:
-            penalties.append("abnormal_career_progression")
-            base_trust -= anomaly_penalty
+        # 3. Experience Mismatch Penalty
+        exp_mismatch, exp_penalty = self._check_experience_mismatch(parsed_resume.get("years_of_experience"), career_history)
+        if exp_penalty > 0:
+            penalties.append(f"experience_mismatch_penalty_{int(exp_mismatch)}_months")
+            base_trust -= exp_penalty
 
-        # 4. Recruiter behavior signals
+        # 4. Salary Anomaly
+        salary_penalty = self._check_salary_anomaly(parsed_resume.get("salary_metadata"))
+        if salary_penalty > 0:
+            penalties.append("salary_anomaly_penalty")
+            base_trust -= salary_penalty
+
+        # 5. Recruiter behavior signals
         response_rate = redrob_signals.get("recruiter_response_rate", 1.0)
         if response_rate < 0.1:
             penalties.append("low_response_rate")
@@ -64,22 +59,13 @@ class TrustEngine:
 
         return {
             "trust_score": trust_score,
-            "penalties": penalties
+            "penalties": penalties,
+            "mismatch_months": exp_mismatch,
+            "experience_mismatch_penalty": exp_penalty,
+            "salary_anomaly_penalty": salary_penalty
         }
 
-    def _check_overlaps(self, career_history: List[Dict[str, Any]]) -> float:
-        """
-        Soft penalty for multiple active roles.
-        """
-        active_roles = [
-            role for role in career_history
-            if not role.get("end_date") or str(role.get("end_date")).strip().lower() in ["present", "current"]
-        ]
 
-        if len(active_roles) >= 2:
-            return 0.2
-
-        return 0.0
 
     def _check_education_duration(
         self,
@@ -112,69 +98,77 @@ class TrustEngine:
 
         return penalty
 
-    def _detect_template_anomaly(
-        self,
-        vector_features: np.ndarray
-    ) -> float:
+    def _check_experience_mismatch(self, stated_yoe, career_history: List[Dict[str, Any]]):
         """
-        Detect anomalous career trajectory using centroid distance.
+        Compare stated years of experience against actual summed career duration.
+        Returns: (mismatch_months: float, penalty: float)
         """
-        if vector_features is None:
+        if stated_yoe is None or not career_history:
+            return 0.0, 0.0
+            
+        try:
+            stated_yoe = float(stated_yoe)
+        except (ValueError, TypeError):
+            return 0.0, 0.0
+            
+        total_years = 0.0
+        from datetime import datetime
+        current_year = datetime.now().year
+        
+        for exp in career_history:
+            start = exp.get("start_year")
+            end = exp.get("end_year")
+            
+            if start is None:
+                continue
+                
+            try:
+                start = float(start)
+                if end is None or (isinstance(end, str) and end.lower() in ["present", "current", "now"]):
+                    end = current_year
+                else:
+                    end = float(end)
+                    
+                if end >= start:
+                    total_years += (end - start)
+            except (ValueError, TypeError):
+                continue
+                
+        diff_years = stated_yoe - total_years
+        
+        # Only penalize if stated YOE is significantly HIGHER than computed total
+        if diff_years > 2.0:
+            mismatch_months = diff_years * 12.0
+            # Scale penalty: 0.1 for every extra year over 2
+            penalty = min(0.3, (diff_years - 2.0) * 0.1)
+            return mismatch_months, penalty
+            
+        return 0.0, 0.0
+
+    def _check_salary_anomaly(self, salary_metadata: Dict[str, Any]) -> float:
+        """
+        Check for min > max or malformed salary metadata if present.
+        Returns penalty: float
+        """
+        if not salary_metadata:
             return 0.0
+            
+        penalty = 0.0
+        
+        min_salary = salary_metadata.get("min_salary")
+        max_salary = salary_metadata.get("max_salary")
+        
+        if min_salary is not None and max_salary is not None:
+            try:
+                min_s = float(min_salary)
+                max_s = float(max_salary)
+                if min_s > max_s:
+                    penalty += 0.2
+                if min_s < 0 or max_s < 0:
+                    penalty += 0.2
+            except (ValueError, TypeError):
+                penalty += 0.1
+                
+        return min(0.4, penalty)
 
-        if self.template_centroids is None:
-            logger.warning("Template centroids not initialized.")
-            return 0.0
 
-        distances = cdist(
-            vector_features.reshape(1, -1),
-            self.template_centroids,
-            metric="euclidean"
-        )
-
-        min_dist = float(np.min(distances))
-
-        if min_dist > self.anomaly_threshold:
-            return 0.2
-
-        return 0.0
-
-    def cluster_historical_trajectories(
-        self,
-        historical_df: pd.DataFrame
-    ) -> Dict[str, Any]:
-        """
-        Build exactly 44 career templates using KMeans.
-        """
-        if historical_df.empty:
-            raise ValueError("Historical trajectory dataframe is empty.")
-
-        features = historical_df.values
-
-        clusterer = KMeans(
-            n_clusters=self.optimal_k,
-            random_state=42,
-            n_init=10
-        )
-
-        labels = clusterer.fit_predict(features)
-        self.template_centroids = clusterer.cluster_centers_
-
-        # Metrics
-        if len(set(labels)) > 1:
-            sil_score = float(silhouette_score(features, labels))
-            db_score = float(davies_bouldin_score(features, labels))
-        else:
-            sil_score = -1.0
-            db_score = -1.0
-
-        # Dynamic anomaly threshold (95 percentile)
-        assigned_centroids = self.template_centroids[labels]
-        distances = np.linalg.norm(features - assigned_centroids, axis=1)
-        self.anomaly_threshold = float(np.percentile(distances, 95))
-
-        return {
-            "optimal_clusters": self.optimal_k,
-            "silhouette_score": sil_score,
-            "davies_bouldin_index": db_score
-        }

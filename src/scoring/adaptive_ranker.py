@@ -68,7 +68,7 @@ class AdaptiveFusionRanker:
         trust_scores = X[:, idx_trust]
         logistics_scores = X[:, idx_logistics]
         
-        # RRF is now securely normalized in FeatureAssembler prior to X matrix construction.
+        # Base Linear Fusion
         final_scores = (
             (self.w_ce * ce_scores) +
             (self.w_rrf * rrf_scores) +
@@ -76,21 +76,34 @@ class AdaptiveFusionRanker:
             (self.w_logistics * logistics_scores)
         )
         
+        # Extract new recruiter quality features
+        idx_response = self.feature_assembler.feature_index.get("recruiter_response_rate", 16)
+        idx_notice = self.feature_assembler.feature_index.get("notice_period_days", 18)
+        idx_completion = self.feature_assembler.feature_index.get("profile_completeness_score", 15)
+        idx_otw = self.feature_assembler.feature_index.get("open_to_work_flag", 17)
+        idx_interview = self.feature_assembler.feature_index.get("interview_completion_rate", 19)
+        
+        response_rate = X[:, idx_response]
+        notice_friction = X[:, idx_notice] # Already normalized to [0,1] in FeatureAssembler
+        completeness = X[:, idx_completion]
+        open_to_work = X[:, idx_otw]
+        interview_rate = X[:, idx_interview]
+        
+        # Combine into a quality multiplier
+        # High response, completeness, open_to_work, and interview_rate increase the multiplier
+        quality_score = (response_rate + completeness + interview_rate + open_to_work) / 4.0
+        
+        # Notice friction reduces the multiplier (Max 20% penalty)
+        quality_multiplier = quality_score * (1.0 - (notice_friction * 0.2))
+        
+        # Boost/Penalize base score softly 
+        final_scores = final_scores * (0.8 + (0.4 * quality_multiplier)) # Maps quality to a [0.8x to 1.2x] scale
+        
         scored_candidates = []
         for i, cand in enumerate(candidates):
             cand_out = cand.copy()
             f_score = float(final_scores[i])
             t_score = float(trust_scores[i])
-            
-            if i < 3:
-                print(f"=== AdaptiveRanker Debug: Candidate {cand.get('candidate_id', 'unknown')} ===")
-                print(f"CE: {ce_scores[i]:.4f} * {self.w_ce:.2f} = {ce_scores[i]*self.w_ce:.4f}")
-                print(f"RRF: {rrf_scores[i]:.4f} * {self.w_rrf:.2f} = {rrf_scores[i]*self.w_rrf:.4f}")
-                print(f"Trust: {t_score:.4f} * {self.w_trust:.2f} = {t_score*self.w_trust:.4f}")
-                print(f"Logistics: {logistics_scores[i]:.4f} * {self.w_logistics:.2f} = {logistics_scores[i]*self.w_logistics:.4f}")
-                print(f"Raw Final: {f_score:.4f}")
-            
-            # 3. Smooth Trust Penalty
             if t_score < 0.4:
                 penalty_multiplier = max(0.7, 1.0 - ((0.4 - t_score) * 0.75))
                 f_score *= penalty_multiplier

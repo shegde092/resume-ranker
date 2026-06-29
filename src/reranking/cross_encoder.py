@@ -97,16 +97,6 @@ class ONNXCrossEncoder:
                     scores = 1 / (1 + np.exp(-logits[:, 1]))
                 else:
                     scores = 1 / (1 + np.exp(-logits))
-                    
-                if i == 0:
-                    print("=== CrossEncoder Predict Debug ===")
-                    print(f"Logits shape: {logits.shape}")
-                    print(f"Raw logits sample (first element): {logits[0, :3] if logits.ndim > 1 else logits[:3]}")
-                    if logits.ndim == 3:
-                        print(f"Pseudo-logits sample (mean of CLS): {pseudo_logits[:3]}")
-                    print(f"Final normalized scores sample: {scores[:3]}")
-                    print("==================================")
-                    
                 all_scores.extend(scores.tolist())
 
             except Exception as e:
@@ -219,14 +209,6 @@ class ONNXCrossEncoder:
         
         scored_candidates = []
         
-        if len(career_scores) > 0:
-            print("=== DEBUG START ===")
-            print(type(career_scores))
-            print(len(career_scores))
-            print(type(career_scores[0]))
-            print(career_scores[:3])
-            print("=== DEBUG END ===")
-            
         for i, cand in enumerate(ce_candidates):
             # Safe score indexing
             c_fit = self._safe_scalar(career_scores[i]) if i < len(career_scores) else 0.0

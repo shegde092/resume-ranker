@@ -12,8 +12,10 @@ class BM25Retriever:
         self.corpus = []
         
     def _tokenize(self, text: str) -> List[str]:
-        # lowercase text, whitespace split, remove empty tokens
-        return [t for t in text.lower().split() if t]
+        # lowercase text, strip punctuation, whitespace split, remove empty tokens
+        import re
+        clean_text = re.sub(r'[^\w\s]', ' ', text.lower())
+        return [t for t in clean_text.split() if t]
         
     def add_candidates(self, documents: List[str], candidate_ids: List[str]):
         """
@@ -49,3 +51,20 @@ class BM25Retriever:
             results[self.candidate_ids[idx]] = float(scores[idx])
             
         return results
+
+    def save(self, path: str):
+        import pickle
+        with open(path, "wb") as f:
+            pickle.dump({
+                "bm25_model": self.bm25_model,
+                "candidate_ids": self.candidate_ids,
+                "corpus": self.corpus
+            }, f)
+
+    def load(self, path: str):
+        import pickle
+        with open(path, "rb") as f:
+            data = pickle.load(f)
+            self.bm25_model = data["bm25_model"]
+            self.candidate_ids = data["candidate_ids"]
+            self.corpus = data["corpus"]

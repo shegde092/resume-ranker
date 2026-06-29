@@ -54,3 +54,17 @@ class DenseRetriever:
                 results[cand_id] = float(dist)
                 
         return results
+
+    def save(self, path_prefix: str):
+        """Save FAISS index and candidate mapping to disk."""
+        faiss.write_index(self.index, f"{path_prefix}.faiss")
+        import json
+        with open(f"{path_prefix}_candidates.json", "w", encoding="utf-8") as f:
+            json.dump(self.candidate_ids, f)
+
+    def load(self, path_prefix: str):
+        """Load FAISS index and candidate mapping from disk."""
+        import json
+        self.index = faiss.read_index(f"{path_prefix}.faiss")
+        with open(f"{path_prefix}_candidates.json", "r", encoding="utf-8") as f:
+            self.candidate_ids = json.load(f)

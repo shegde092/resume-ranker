@@ -44,7 +44,12 @@ class FeatureAssembler:
             "visa_penalty",          
             "years_of_experience_match", 
             "skill_overlap_ratio",       
-            "certification_score"        
+            "certification_score",
+            "profile_completeness_score",
+            "recruiter_response_rate",
+            "open_to_work_flag",
+            "notice_period_days",
+            "interview_completion_rate"
         ]
         
         self.feature_index = {
@@ -114,6 +119,15 @@ class FeatureAssembler:
         skill_overlap_ratio = self._clamp(self._safe_float(candidate.get("skill_overlap_ratio"), 0.0))
         certification_score = self._clamp(self._safe_float(candidate.get("certification_score"), 0.0))
         
+        # 6. Recruiter & Profile Quality Signals (P1)
+        redrob_signals = candidate.get("redrob_signals", {})
+        profile_completeness_score = self._clamp(self._safe_float(candidate.get("profile_completeness_score", redrob_signals.get("profile_completeness_score")), 0.5))
+        recruiter_response_rate = self._clamp(self._safe_float(redrob_signals.get("recruiter_response_rate"), 0.5))
+        open_to_work_flag = 1.0 if candidate.get("open_to_work") or redrob_signals.get("open_to_work") else 0.0
+        raw_notice = self._safe_float(candidate.get("notice_period_days", redrob_signals.get("notice_period_days")), 30.0)
+        notice_period_days = self._clamp(raw_notice / 90.0)
+        interview_completion_rate = self._clamp(self._safe_float(redrob_signals.get("interview_completion_rate"), 0.5))
+        
         features = [
             retrieval_rrf,
             ce_career,
@@ -129,7 +143,12 @@ class FeatureAssembler:
             visa_penalty,
             years_of_experience_match,
             skill_overlap_ratio,
-            certification_score
+            certification_score,
+            profile_completeness_score,
+            recruiter_response_rate,
+            open_to_work_flag,
+            notice_period_days,
+            interview_completion_rate
         ]
         
         # 6. Feature Shape Validation

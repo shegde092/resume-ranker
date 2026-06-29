@@ -18,9 +18,6 @@ class ReciprocalRankFusion:
         Applies Reciprocal Rank Fusion to dense and BM25 results.
         Returns a sorted list of dicts: [{'candidate_id': ..., 'score': ...}, ...]
         """
-        print("DENSE:", dense_results)
-        print("BM25:", bm25_results)
-        
         rrf_scores = {}
         
         # Rank dense results (sort by score descending)
