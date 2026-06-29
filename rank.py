@@ -4,6 +4,7 @@ import json
 import csv
 import argparse
 import logging
+import math
 from typing import List, Dict, Any
 
 from src.pipeline.ranking_pipeline import RankingPipeline
@@ -44,19 +45,28 @@ def main():
     results.sort(key=lambda x: (-x.get("final_score", 0.0), x.get("candidate_id", "")))
     top_100 = results[:100]
     
-    # Enforce exactly 100 constraint? The requirements say "Constraints: exactly 100 rows"
-    # If we have less than 100 candidates, we just output what we have, but hopefully the dataset has >= 100.
+    def calculate_fit(score):
+        score = max(0.0, min(1.0, float(score)))
+        fit = 100.0 / (1.0 + math.exp(-8.0 * (score - 0.5)))
+        return round(fit, 2)
     
     logger.info(f"Exporting top {len(top_100)} candidates to {args.out}")
     with open(args.out, 'w', encoding='utf-8', newline='') as f:
         writer = csv.writer(f)
-        writer.writerow(["candidate_id", "rank", "score", "reasoning"])
+        writer.writerow(["candidate_id", "rank", "raw_score", "fit_percentage", "reasoning"])
         
         for rank, cand in enumerate(top_100, start=1):
             candidate_id = cand.get("candidate_id", f"unknown_{rank}")
             score = cand.get("final_score", 0.0)
-            reasoning = cand.get("reason", "")
-            writer.writerow([candidate_id, rank, score, reasoning])
+            fit_percentage = calculate_fit(score)
+            reasoning = cand.get("reasoning", cand.get("reason", ""))
+            writer.writerow([
+                candidate_id,
+                rank,
+                round(score, 4),
+                fit_percentage,
+                reasoning
+            ])
             
     logger.info("Done.")
 
