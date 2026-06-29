@@ -1,6 +1,6 @@
 import logging
 import numpy as np
-from rank_bm25 import BM25Okapi
+from rank_bm25 import BM25L
 from typing import List, Dict
 
 logger = logging.getLogger(__name__)
@@ -26,7 +26,7 @@ class BM25Retriever:
         self.corpus.extend(tokenized_corpus)
         self.candidate_ids.extend(candidate_ids)
         
-        self.bm25_model = BM25Okapi(self.corpus)
+        self.bm25_model = BM25L(self.corpus)
         
     def search(self, query: str, top_k: int = 2000) -> Dict[str, float]:
         """
