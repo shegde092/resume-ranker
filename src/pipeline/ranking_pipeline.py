@@ -17,21 +17,7 @@ from src.scoring.feature_assembler import FeatureAssembler
 
 logger = logging.getLogger(__name__)
 
-class ReciprocalRankFusion:
-    def __init__(self, k: int = 60):
-        self.k = k
-        
-    def fuse(self, dense_results: Dict[str, float], bm25_results: Dict[str, float], top_k: int = 2000) -> List[Dict[str, Any]]:
-        rrf_scores = {}
-        for results in [dense_results, bm25_results]:
-            ranked = sorted(results.items(), key=lambda item: item[1], reverse=True)
-            for rank, (cand_id, _) in enumerate(ranked, start=1):
-                rrf_scores[cand_id] = rrf_scores.get(cand_id, 0.0) + 1.0 / (self.k + rank)
-                
-        fused_ranked = sorted(rrf_scores.items(), key=lambda item: item[1], reverse=True)
-        return [{"candidate_id": cand_id, "score": score} for cand_id, score in fused_ranked[:top_k]]
-
-
+from src.retrieval.fusion import ReciprocalRankFusion
 class RankingPipeline:
     """
     Master orchestrator for the candidate ranking flow.
