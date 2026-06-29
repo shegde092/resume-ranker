@@ -1,100 +1,132 @@
 import logging
-import re
 from typing import List, Dict, Any
 
 logger = logging.getLogger(__name__)
 
 class BlockSelector:
-    def __init__(self, block_size: int = 200, overlap: int = 20, max_blocks: int = 3):
-        self.block_size = block_size
-        self.overlap = overlap
-        self.max_blocks = max_blocks
-        
-    def _split_into_blocks(self, text: str) -> List[str]:
-        words = text.split()
-        blocks = []
-        for i in range(0, len(words), self.block_size - self.overlap):
-            block_words = words[i:i + self.block_size]
-            if block_words:
-                blocks.append(" ".join(block_words))
-        return blocks
-        
-    def _score_block_lexical(self, block: str, query_terms: set) -> float:
-        block_lower = block.lower()
-        block_terms = set(re.sub(r'[^a-z0-9\s]', '', block_lower).split())
-        
-        score = 0.0
-        for term in query_terms.intersection(block_terms):
-            if not term:
-                continue
-            if len(term) > 3:
-                score += 2.0
-            else:
-                score += 1.0
-        return float(score)
+    """
+    Generates rich natural-language semantic chunks for Candidates.
+    (Kept named BlockSelector for compatibility with RankingPipeline).
+    """
+    def __init__(self):
+        self._block_cache = {}
+
+    def clear_cache(self):
+        """Clear internal chunk cache to prevent memory growth."""
+        self._block_cache.clear()
 
     def get_query_terms(self, query: str) -> set:
-        """Precomputes query tokens to avoid redundant regex compilation."""
-        query_terms = set(re.sub(r'[^a-z0-9\s]', '', query.lower()).split())
-        return {t for t in query_terms if t}
+        # Kept for compatibility if still called, but we don't strictly need lexical overlap filtering anymore
+        return set()
 
-    def select_blocks(self, parsed_resume: Dict[str, Any], query_terms: set) -> Dict[str, str]:
+    def select_blocks(self, parsed_resume: Dict[str, Any], query_terms: set = None) -> Dict[str, str]:
         """
-        Splits sections into blocks, selects top_k blocks using exact token overlap,
-        and restores global context (headline, YOE, skills, certs) per architecture.
+        Generates 4 distinct semantic chunks from the candidate schema.
         """
+        cand_id = parsed_resume.get("candidate_id")
+        if cand_id and cand_id in self._block_cache:
+            return self._block_cache[cand_id]
+            
+        redrob_signals = parsed_resume.get("redrob_signals", {})
         profile = parsed_resume.get("profile", {})
-        headline = profile.get("headline", "")
-        yoe = profile.get("years_of_experience", "")
         
-        skills = parsed_resume.get("skills", [])
-        if not skills:
-            skills = profile.get("skills", [])
+        # 1. Career Chunk
+        career_sentences = []
+        yoe = profile.get("years_of_experience", parsed_resume.get("years_of_experience"))
+        if yoe is not None:
+            career_sentences.append(f"Candidate has {yoe} years experience.")
             
-        certs = parsed_resume.get("certifications", [])
-        if not certs:
-            certs = profile.get("certifications", [])
+        current_title = profile.get("current_title", parsed_resume.get("current_title"))
+        current_company = profile.get("current_company", parsed_resume.get("current_company"))
+        if current_title and current_company:
+            career_sentences.append(f"Currently working as {current_title} at {current_company}.")
             
-        skill_strings = [str(s) for s in skills[:15]]
-        cert_strings = [str(c) for c in certs[:5]]
-            
-        # Global context string precisely as required
-        global_context = (
-            f"Headline: {headline} | "
-            f"YOE: {yoe} | "
-            f"Skills: {', '.join(skill_strings)} | "
-            f"Certifications: {', '.join(cert_strings)}"
-        )
-        
-        def _get_top_text(section_text: str) -> str:
-            if not section_text:
-                return global_context
-                
-            if not query_terms:
-                return global_context + "\n\n" + section_text[:1000]
-                
-            blocks = self._split_into_blocks(section_text)
-            scored_blocks = []
-            for b in blocks:
-                score = self._score_block_lexical(b, query_terms)
-                scored_blocks.append((score, b))
-            scored_blocks.sort(key=lambda x: x[0], reverse=True)
-            top_blocks = [b for score, b in scored_blocks[:self.max_blocks]]
-            return global_context + "\n\n" + "\n...\n".join(top_blocks)
-
-        # Process each section independently for section-wise CE scoring
         career_history = parsed_resume.get("career_history", [])
-        career_text = " ".join([str(c.get("description", "")) + " " + str(c.get("title", "")) for c in career_history])
+        def _sort_key(exp):
+            ed = str(exp.get("end_date", "")).strip().lower()
+            if not ed or ed in ("present", "current"):
+                return "9999-99-99"
+            return ed
+        career_history = sorted(career_history, key=_sort_key, reverse=True)
+        for exp in career_history[:3]: # top 3 most recent
+            title = exp.get("title", "professional")
+            company = exp.get("company", "a company")
+            months = exp.get("duration_months", exp.get("duration", 0))
+            desc = exp.get("description", "")
+            career_sentences.append(f"Worked as {title} at {company} for {months} months. {desc}")
+            
+        career_text = " ".join(career_sentences).strip()
         
-        skills_text = ", ".join([str(s) for s in skills])
-        profile_text = str(profile.get("summary", "")) + " " + str(headline)
+        # 2. Skills Chunk
+        skills_sentences = []
+        skills = parsed_resume.get("skills", profile.get("skills", []))
+        assessment_scores = redrob_signals.get("skill_assessment_scores", {})
         
+        if isinstance(skills, list):
+            for skill in skills[:15]:
+                if isinstance(skill, dict):
+                    name = skill.get("name", "")
+                    prof = skill.get("proficiency", "experienced")
+                    months = skill.get("duration_months", "")
+                    score = assessment_scores.get(name)
+                    
+                    s = f"Candidate is {prof} in {name}"
+                    if months:
+                        s += f" with {months} months experience"
+                    if score:
+                        s += f" and assessment score {score}"
+                    skills_sentences.append(s + ".")
+                else:
+                    skills_sentences.append(f"Skilled in {skill}.")
+                    
+        skills_text = " ".join(skills_sentences).strip()
+        
+        # 3. Profile Chunk
+        profile_sentences = []
+        loc = profile.get("location", parsed_resume.get("location"))
+        if loc:
+            profile_sentences.append(f"Candidate located in {loc}.")
+            
+        work_mode = redrob_signals.get("preferred_work_mode")
+        if work_mode:
+            profile_sentences.append(f"Prefers {work_mode} work.")
+            
+        if redrob_signals.get("willing_to_relocate"):
+            profile_sentences.append("Willing to relocate.")
+            
+        summary = profile.get("summary", parsed_resume.get("summary", ""))
+        if summary:
+            profile_sentences.append(f"Summary: {summary}")
+            
+        profile_text = " ".join(profile_sentences).strip()
+        
+        # 4. Education Chunk
+        edu_sentences = []
         education = parsed_resume.get("education", [])
-        edu_text = " ".join([str(e.get("degree", "")) + " " + str(e.get("field_of_study", "")) for e in education])
+        for edu in education[:3]:
+            degree = edu.get("degree", "Degree")
+            field = edu.get("field_of_study", "a field")
+            inst = edu.get("institution", "institution")
+            tier = edu.get("tier", "")
+            grade = edu.get("grade", "")
+            
+            s = f"Candidate holds {degree} in {field} from {inst}"
+            if tier:
+                s += f" (tier {tier})"
+            if grade:
+                s += f" with grade {grade}"
+            edu_sentences.append(s + ".")
+            
+        edu_text = " ".join(edu_sentences).strip()
         
-        return {
-            "career_text": _get_top_text(career_text),
-            "skills_text": _get_top_text(skills_text),
-            "profile_text": _get_top_text(profile_text),
-            "education_text": _get_top_text(edu_text)
+        blocks = {
+            "career_text": career_text,
+            "skills_text": skills_text,
+            "profile_text": profile_text,
+            "education_text": edu_text
         }
+        
+        if cand_id:
+            self._block_cache[cand_id] = blocks
+            
+        return blocks

@@ -47,6 +47,58 @@ class JDParser:
         # 3. Extract Locations
         locations = self._extract_locations(text_lower)
         
+        # 4. Sectional Heuristic Routing
+        import re
+        sentences = [s.strip() for s in re.split(r'(?<=[.!?]) +|\n+', jd_text) if s.strip()]
+        
+        career_sentences = []
+        skills_sentences = []
+        profile_sentences = []
+        edu_sentences = []
+        
+        # Keyword markers
+        edu_markers = {"degree", "bachelor", "master", "phd", "university", "college", "graduat"}
+        profile_markers = {"location", "remote", "hybrid", "onsite", "relocat", "culture", "visa", "timezone"}
+        skill_markers = {"experience with", "proficient in", "knowledge of", "stack", "tools", "technologies", "familiarity"}
+        career_markers = {"years", "experience", "role", "responsibilities", "manage", "lead", "develop", "build"}
+        
+        for sentence in sentences:
+            s_lower = sentence.lower()
+            matched = False
+            
+            if any(m in s_lower for m in edu_markers):
+                edu_sentences.append(sentence)
+                matched = True
+                
+            if any(m in s_lower for m in profile_markers) or any(l in s_lower for l in locations):
+                profile_sentences.append(sentence)
+                matched = True
+                
+            # If the sentence explicitly contains known extracted skills, it definitely belongs in skills
+            has_explicit_skill = any(sk in s_lower for sk in found_skills)
+            
+            if has_explicit_skill or any(m in s_lower for m in skill_markers):
+                skills_sentences.append(sentence)
+                matched = True
+                
+            if any(m in s_lower for m in career_markers):
+                career_sentences.append(sentence)
+                matched = True
+                
+            # Fallback: If a sentence didn't match anything specific, duplicate into career and skills to avoid information loss
+            if not matched:
+                career_sentences.append(sentence)
+                skills_sentences.append(sentence)
+                
+        # Extract Work Mode
+        required_work_modes = []
+        if "remote" in text_lower:
+            required_work_modes.append("remote")
+        if "hybrid" in text_lower:
+            required_work_modes.append("hybrid")
+        if "onsite" in text_lower or "on-site" in text_lower:
+            required_work_modes.append("onsite")
+            
         return {
             "raw_text": jd_text,
             "query": jd_text,
@@ -54,7 +106,12 @@ class JDParser:
             "max_yoe": max_yoe,
             "required_skills": found_skills,
             "preferred_skills": [],
-            "locations": locations
+            "locations": locations,
+            "required_work_mode": required_work_modes,
+            "career_query": " ".join(career_sentences),
+            "skills_query": " ".join(skills_sentences),
+            "profile_query": " ".join(profile_sentences),
+            "education_query": " ".join(edu_sentences)
         }
 
     def _resolve_yoe(self, matches: List[Tuple[str, str, str]]) -> Tuple[int, int]:

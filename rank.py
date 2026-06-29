@@ -16,30 +16,39 @@ logger = logging.getLogger("rank")
 
 def main():
     parser = argparse.ArgumentParser(description="Redrob Candidate Ranking Submission Script")
-    parser.add_argument("--candidates", type=str, required=True, help="Path to candidates.jsonl (ignored, uses offline artifacts instead)")
+    parser.add_argument("--candidates", type=str, required=True, help="Path to candidate dataset (.json or .jsonl)")
     parser.add_argument("--out", type=str, required=True, help="Path to output submission.csv")
-    parser.add_argument("--jd", type=str, default="Looking for a Python machine learning engineer with NLP and FastAPI experience", help="Job description string or path to txt")
-    parser.add_argument("--artifacts", type=str, default="artifacts", help="Path to precomputed artifacts directory")
+    parser.add_argument("--jd", type=str, required=True, help="Job description string or path to txt/doc/json")
     args = parser.parse_args()
 
+    # Load JD
     jd = args.jd
     if os.path.exists(jd):
         with open(jd, 'r', encoding='utf-8') as f:
             jd = f.read().strip()
             
+    # Load Candidates
+    logger.info(f"Loading candidates from {args.candidates}...")
+    candidates = []
+    if args.candidates.endswith('.json'):
+        with open(args.candidates, 'r', encoding='utf-8') as f:
+            candidates = json.load(f)
+            if isinstance(candidates, dict):
+                candidates = [candidates]
+    else:
+        with open(args.candidates, 'r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if line:
+                    candidates.append(json.loads(line))
+                    
+    logger.info(f"Loaded {len(candidates)} candidates.")
+
     logger.info("Initializing Ranking Pipeline...")
     pipeline = RankingPipeline()
     
-    logger.info(f"Loading offline artifacts from {args.artifacts}...")
-    if not os.path.exists(args.artifacts):
-        logger.error(f"Artifacts directory not found: {args.artifacts}. Please run scripts/precompute.py first.")
-        sys.exit(1)
-        
-    pipeline.load_artifacts(args.artifacts)
-    
-    logger.info("Running online ranking (no indices rebuilt)...")
-    # We pass all_resumes=None since the cache is already loaded
-    results = pipeline.run(raw_jd=jd, all_resumes=None, top_k=min(2000, len(pipeline.candidate_cache)))
+    logger.info("Running ranking (building indices dynamically)...")
+    results = pipeline.run(raw_jd=jd, all_resumes=candidates, top_k=min(2000, len(candidates)))
     
     # Sort by final_score (descending), break ties using candidate_id (ascending)
     results.sort(key=lambda x: (-x.get("final_score", 0.0), x.get("candidate_id", "")))
@@ -53,7 +62,7 @@ def main():
     logger.info(f"Exporting top {len(top_100)} candidates to {args.out}")
     with open(args.out, 'w', encoding='utf-8', newline='') as f:
         writer = csv.writer(f)
-        writer.writerow(["candidate_id", "rank", "raw_score", "fit_percentage", "reasoning"])
+        writer.writerow(["candidate_id", "rank", "fit_percentage", "reasoning"])
         
         for rank, cand in enumerate(top_100, start=1):
             candidate_id = cand.get("candidate_id", f"unknown_{rank}")
@@ -63,7 +72,6 @@ def main():
             writer.writerow([
                 candidate_id,
                 rank,
-                round(score, 4),
                 fit_percentage,
                 reasoning
             ])

@@ -82,16 +82,24 @@ class AdaptiveFusionRanker:
         idx_completion = self.feature_assembler.feature_index.get("profile_completeness_score", 15)
         idx_otw = self.feature_assembler.feature_index.get("open_to_work_flag", 17)
         idx_interview = self.feature_assembler.feature_index.get("interview_completion_rate", 19)
+        idx_github = self.feature_assembler.feature_index.get("github_activity_score", 20)
+        idx_search_app = self.feature_assembler.feature_index.get("search_appearance", 22)
+        idx_saved = self.feature_assembler.feature_index.get("recruiter_saved_count", 23)
+        idx_verification = self.feature_assembler.feature_index.get("verification_score", 26)
         
         response_rate = X[:, idx_response]
         notice_friction = X[:, idx_notice] # Already normalized to [0,1] in FeatureAssembler
         completeness = X[:, idx_completion]
         open_to_work = X[:, idx_otw]
         interview_rate = X[:, idx_interview]
+        github_score = X[:, idx_github]
+        search_app = X[:, idx_search_app]
+        saved_count = X[:, idx_saved]
+        verification = X[:, idx_verification]
         
         # Combine into a quality multiplier
-        # High response, completeness, open_to_work, and interview_rate increase the multiplier
-        quality_score = (response_rate + completeness + interview_rate + open_to_work) / 4.0
+        # High response, completeness, open_to_work, interview_rate, github, search_app, saved_count, verification increase the multiplier
+        quality_score = (response_rate + completeness + interview_rate + open_to_work + github_score + search_app + saved_count + verification) / 8.0
         
         # Notice friction reduces the multiplier (Max 20% penalty)
         quality_multiplier = quality_score * (1.0 - (notice_friction * 0.2))

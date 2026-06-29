@@ -124,7 +124,7 @@ class ONNXCrossEncoder:
 
         return float(value)
 
-    def rerank(self, query: str, candidates: List[Dict[str, Any]], top_k: int = 500) -> List[Dict[str, Any]]:
+    def rerank(self, parsed_jd: Dict[str, Any], candidates: List[Dict[str, Any]], top_k: int = 500) -> List[Dict[str, Any]]:
         """
         Rerank retrieved candidates using 4 separate semantic section scores.
         Ensures strict latency budget compliance.
@@ -143,13 +143,20 @@ class ONNXCrossEncoder:
         ce_candidates = candidates[:ce_limit]
         num_cands = len(ce_candidates)
             
-        career_pairs = [(str(query or ""), str(cand.get("career_text") or "")) for cand in ce_candidates]
-        skill_pairs = [(str(query or ""), str(cand.get("skills_text") or "")) for cand in ce_candidates]
-        profile_pairs = [(str(query or ""), str(cand.get("profile_text") or "")) for cand in ce_candidates]
-        edu_pairs = [(str(query or ""), str(cand.get("education_text") or "")) for cand in ce_candidates]
+        career_query = str(parsed_jd.get("career_query", "")).strip()
+        skills_query = str(parsed_jd.get("skills_query", "")).strip()
+        profile_query = str(parsed_jd.get("profile_query", "")).strip()
+        edu_query = str(parsed_jd.get("education_query", "")).strip()
+        
+        career_pairs = [(career_query, str(cand.get("career_text") or "")) for cand in ce_candidates]
+        skill_pairs = [(skills_query, str(cand.get("skills_text") or "")) for cand in ce_candidates]
+        profile_pairs = [(profile_query, str(cand.get("profile_text") or "")) for cand in ce_candidates]
+        edu_pairs = [(edu_query, str(cand.get("education_text") or "")) for cand in ce_candidates]
         
         # 1. Career
-        career_scores = self.predict(career_pairs)
+        t0 = time.time()
+        career_scores = self.predict(career_pairs) if career_query else [0.0] * num_cands
+        c_lat = time.time() - t0
         
         # 2. Skills
         elapsed = time.time() - start_time
@@ -162,20 +169,25 @@ class ONNXCrossEncoder:
         else:
             reduced_limit = num_cands
             
-        skill_scores_raw = self.predict(skill_pairs)
-        skill_scores = skill_scores_raw + [0.0] * (num_cands - len(skill_scores_raw))
+        t0 = time.time()
+        if skills_query:
+            skill_scores_raw = self.predict(skill_pairs)
+            skill_scores = skill_scores_raw + [0.0] * (num_cands - len(skill_scores_raw))
+        else:
+            skill_scores = [0.0] * num_cands
+        s_lat = time.time() - t0
         
         # Track which components were skipped to renormalize weights
         skip_profile = False
         skip_edu = False
 
         # Adaptive degradation based on candidate volume
-        if num_cands > 700:
-            logger.warning("Adaptive degradation: skipping profile and education scoring (cands > 700)")
+        t0 = time.time()
+        if num_cands > 700 or not profile_query:
+            if num_cands > 700:
+                logger.warning("Adaptive degradation: skipping profile and education scoring (cands > 700)")
             profile_scores = [0.0] * num_cands
-            edu_scores = [0.0] * num_cands
             skip_profile = True
-            skip_edu = True
         else:
             # 3. Profile
             elapsed = time.time() - start_time
@@ -191,21 +203,25 @@ class ONNXCrossEncoder:
             else:
                 profile_scores_raw = self.predict(profile_pairs)
                 profile_scores = profile_scores_raw + [0.0] * (num_cands - len(profile_scores_raw))
+        p_lat = time.time() - t0
                 
+        t0 = time.time()
+        if num_cands > 600 or not edu_query:
             if num_cands > 600:
                 logger.warning("Adaptive degradation: skipping education scoring (cands > 600)")
+            edu_scores = [0.0] * num_cands
+            skip_edu = True
+        else:
+            # 4. Education
+            elapsed = time.time() - start_time
+            if elapsed > budget * 0.90:
+                logger.warning("CE latency budget exhausted, skipping education scoring")
                 edu_scores = [0.0] * num_cands
                 skip_edu = True
             else:
-                # 4. Education
-                elapsed = time.time() - start_time
-                if elapsed > budget * 0.90:
-                    logger.warning("CE latency budget exhausted, skipping education scoring")
-                    edu_scores = [0.0] * num_cands
-                    skip_edu = True
-                else:
-                    edu_scores_raw = self.predict(edu_pairs)
-                    edu_scores = edu_scores_raw + [0.0] * (num_cands - len(edu_scores_raw))
+                edu_scores_raw = self.predict(edu_pairs)
+                edu_scores = edu_scores_raw + [0.0] * (num_cands - len(edu_scores_raw))
+        e_lat = time.time() - t0
         
         scored_candidates = []
         
@@ -226,14 +242,19 @@ class ONNXCrossEncoder:
             })
             
             # Adaptive Weight Normalization
-            weight_sum = 0.4 + 0.3
-            score_sum = (0.4 * c_fit) + (0.3 * s_fit)
+            weight_sum = 0.0
+            score_sum = 0.0
             
-            if not skip_profile:
+            if career_query:
+                weight_sum += 0.4
+                score_sum += (0.4 * c_fit)
+            if skills_query:
+                weight_sum += 0.3
+                score_sum += (0.3 * s_fit)
+            if profile_query and not skip_profile:
                 weight_sum += 0.2
                 score_sum += (0.2 * p_fit)
-                
-            if not skip_edu:
+            if edu_query and not skip_edu:
                 weight_sum += 0.1
                 score_sum += (0.1 * e_fit)
             
@@ -247,5 +268,6 @@ class ONNXCrossEncoder:
         
         total_duration = time.time() - start_time
         logger.info(f"CrossEncoder reranking took {total_duration:.3f}s")
+        logger.info(f"CE Latencies -> Career: {c_lat:.3f}s, Skills: {s_lat:.3f}s, Profile: {p_lat:.3f}s, Education: {e_lat:.3f}s")
         
         return final_candidates
