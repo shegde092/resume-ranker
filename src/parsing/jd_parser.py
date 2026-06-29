@@ -26,6 +26,9 @@ class JDParser:
             logger.warning("Spacy model not found. Run 'python -m spacy download en_core_web_sm' to enable NER.")
             self.nlp = None
 
+    def parse(self, jd_text: str) -> Dict[str, Any]:
+        return self.parse_text(jd_text)
+
     def parse_text(self, jd_text: str) -> Dict[str, Any]:
         """
         Parse raw JD text into structured requirements.
@@ -46,6 +49,7 @@ class JDParser:
         
         return {
             "raw_text": jd_text,
+            "query": jd_text,
             "min_yoe": min_yoe,
             "max_yoe": max_yoe,
             "required_skills": found_skills,
