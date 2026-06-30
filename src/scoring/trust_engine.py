@@ -146,7 +146,11 @@ class TrustEngine:
         total_months = 0.0
         consulting_months = 0.0
         for exp in career_history:
-            dur = exp.get("duration_months") or 0.0
+            dur_raw = exp.get("duration_months")
+            try:
+                dur = float(dur_raw) if dur_raw is not None else 0.0
+            except (ValueError, TypeError):
+                dur = 0.0
             company = str(exp.get("company", "")).lower()
             desc = str(exp.get("description", "")).lower()
             
@@ -176,7 +180,10 @@ class TrustEngine:
         for exp in career_history:
             dur = exp.get("duration_months")
             if dur is not None:
-                total_years += dur / 12.0
+                try:
+                    total_years += float(dur) / 12.0
+                except (ValueError, TypeError):
+                    pass
             else:
                 start = self._parse_date(exp.get("start_date") or exp.get("start_year"))
                 end = self._parse_date(exp.get("end_date") or exp.get("end_year"))

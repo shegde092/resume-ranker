@@ -56,8 +56,11 @@ class ReasonGenerator:
             reasons.append(base)
         else:
             base = "Partial match"
-            if yoe is not None and jd_yoe_min is not None and float(yoe) < float(jd_yoe_min):
-                base += f" with lower experience ({yoe} years vs required {jd_yoe_min} years)"
+            try:
+                if yoe is not None and jd_yoe_min is not None and float(yoe) < float(jd_yoe_min):
+                    base += f" with lower experience ({yoe} years vs required {jd_yoe_min} years)"
+            except (ValueError, TypeError):
+                pass
             reasons.append(base)
             
         # Logistics & Availability
