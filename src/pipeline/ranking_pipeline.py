@@ -204,21 +204,6 @@ class RankingPipeline:
             explanation = self.reason_generator.generate(cand, parsed_jd, rank=rank_idx)
             cand.update(explanation)
             explained_results.append(cand)
-        rank_t = time.time() - t0
-        
-        total_latency = time.time() - pipeline_start
-        
-        # Pipeline Telemetry
-        logger.info(f"Pipeline Telemetry:")
-        logger.info(f" - Parse time:      {parse_t:.3f}s")
-        logger.info(f" - Index Build:     {index_build_t:.3f}s")
-        logger.info(f" - Retrieval:       {retrieval_t:.3f}s")
-        logger.info(f" - RRF Fusion:      {rrf_t:.3f}s")
-        logger.info(f" - Chunk Gen:       {chunk_t:.3f}s")
-        logger.info(f" - Cross Encoder:   {ce_t:.3f}s")
-        logger.info(f" - Feat Assembly:   {feature_t:.3f}s")
-        logger.info(f" - Final Rank:      {rank_t:.3f}s")
-        logger.info(f" => Total Latency:  {total_latency:.3f}s")
             
         return explained_results
 
