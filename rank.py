@@ -68,12 +68,21 @@ def main():
         except Exception as e:
             logger.warning(f"Could not read candidates file for incremental verification: {e}")
             
+    SAFE_DYNAMIC_LIMIT = 100
     if unseen_candidates:
-        logger.error(
-            f"Error: Detected {len(unseen_candidates)} candidates not present in the precomputed cache. "
-            "Offline precomputation is a mandatory step. Please run 'python scripts/precompute.py' first."
-        )
-        sys.exit(1)
+        if len(unseen_candidates) > SAFE_DYNAMIC_LIMIT:
+            logger.error(
+                f"Error: Detected {len(unseen_candidates)} candidates missing from the precomputed cache. "
+                f"This exceeds the safe online indexing limit of {SAFE_DYNAMIC_LIMIT} candidates on CPU (would cause timeout).\n"
+                "Please run offline precomputation first: python scripts/precompute.py --candidates <path> --out_dir artifacts"
+            )
+            sys.exit(1)
+        else:
+            logger.info(
+                f"Incremental indexing triggered: encoding {len(unseen_candidates)} unseen candidates "
+                f"(safe limit <= {SAFE_DYNAMIC_LIMIT})..."
+            )
+            pipeline._build_dynamic_indices(unseen_candidates)
         
     logger.info("Running online ranking (sectional multi-index)...")
     results = pipeline.run(raw_jd=jd, all_resumes=None, top_k=min(2000, len(pipeline.candidate_cache)))
