@@ -44,37 +44,36 @@ def main():
     unseen_count = 0
     if os.path.exists(args.candidates):
         logger.info(f"Ingesting candidates file '{args.candidates}' to check for unseen profiles...")
+        candidates = []
         try:
-            is_jsonl = True
-            if args.candidates.endswith('.json'):
+            if args.candidates.endswith('.parquet'):
+                import pandas as pd
+                df = pd.read_parquet(args.candidates)
+                candidates = df.to_dict(orient="records")
+            else:
                 try:
                     with open(args.candidates, 'r', encoding='utf-8') as f:
                         data = json.load(f)
                         if isinstance(data, list):
-                            is_jsonl = False
-                            for cand in data:
-                                cid = cand.get("candidate_id")
-                                if cid and cid not in pipeline.candidate_cache:
-                                    unseen_count += 1
-                                    unseen_candidates.append(cand)
-                                    if unseen_count > SAFE_DYNAMIC_LIMIT:
-                                        break
+                            candidates = data
+                        elif isinstance(data, dict):
+                            candidates = [data]
                 except Exception:
-                    pass
-            if is_jsonl:
-                with open(args.candidates, 'r', encoding='utf-8') as f:
-                    for line in f:
-                        line = line.strip()
-                        if line:
-                            cand = json.loads(line)
-                            cid = cand.get("candidate_id")
-                            if cid and cid not in pipeline.candidate_cache:
-                                unseen_count += 1
-                                unseen_candidates.append(cand)
-                                if unseen_count > SAFE_DYNAMIC_LIMIT:
-                                    break
+                    with open(args.candidates, 'r', encoding='utf-8') as f:
+                        for line in f:
+                            line = line.strip()
+                            if line:
+                                candidates.append(json.loads(line))
         except Exception as e:
             logger.warning(f"Could not read candidates file for incremental verification: {e}")
+            
+        for cand in candidates:
+            cid = cand.get("candidate_id")
+            if cid and cid not in pipeline.candidate_cache:
+                unseen_count += 1
+                unseen_candidates.append(cand)
+                if unseen_count > SAFE_DYNAMIC_LIMIT:
+                    break
             
     if unseen_count > SAFE_DYNAMIC_LIMIT:
         logger.error(

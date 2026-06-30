@@ -34,11 +34,24 @@ def main():
         df = pd.read_parquet(args.candidates)
         candidates = df.to_dict(orient="records")
     else:
-        with open(args.candidates, 'r', encoding='utf-8') as f:
-            for line in f:
-                line = line.strip()
-                if line:
-                    candidates.append(json.loads(line))
+        # Try standard JSON array first, fallback to line-by-line JSONL
+        try:
+            with open(args.candidates, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                if isinstance(data, list):
+                    candidates = data
+                elif isinstance(data, dict):
+                    candidates = [data]
+        except Exception:
+            candidates = []
+            with open(args.candidates, 'r', encoding='utf-8') as f:
+                for line in f:
+                    line = line.strip()
+                    if line:
+                        try:
+                            candidates.append(json.loads(line))
+                        except Exception as e:
+                            logger.warning(f"Skipping malformed JSON line: {e}")
                 
     logger.info(f"Loaded {len(candidates)} candidates.")
     
