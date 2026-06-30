@@ -1,4 +1,8 @@
 import os
+# Force strict offline mode for Hugging Face hub / sentence transformers
+os.environ["TRANSFORMERS_OFFLINE"] = "1"
+os.environ["HF_HUB_OFFLINE"] = "1"
+
 import sys
 import json
 import csv
@@ -34,7 +38,7 @@ def main():
         
     pipeline.load_artifacts(args.artifacts)
     
-    # Defensive check: read candidates from file and dynamically index any unseen records
+    # Defensive check: read candidates from file and verify they are present in cache
     unseen_candidates = []
     if os.path.exists(args.candidates):
         logger.info(f"Ingesting candidates file '{args.candidates}' to check for unseen profiles...")
@@ -65,8 +69,11 @@ def main():
             logger.warning(f"Could not read candidates file for incremental verification: {e}")
             
     if unseen_candidates:
-        logger.info(f"Incremental indexing triggered: encoding {len(unseen_candidates)} unseen candidates...")
-        pipeline._build_dynamic_indices(unseen_candidates)
+        logger.error(
+            f"Error: Detected {len(unseen_candidates)} candidates not present in the precomputed cache. "
+            "Offline precomputation is a mandatory step. Please run 'python scripts/precompute.py' first."
+        )
+        sys.exit(1)
         
     logger.info("Running online ranking (sectional multi-index)...")
     results = pipeline.run(raw_jd=jd, all_resumes=None, top_k=min(2000, len(pipeline.candidate_cache)))
