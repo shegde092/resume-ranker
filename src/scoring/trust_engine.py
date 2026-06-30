@@ -171,7 +171,9 @@ class TrustEngine:
                 if prof in ["expert", "advanced", "lead", "senior"]:
                     expert_count += 1
         denom = max(1.0, stated_yoe)
-        return expert_count / denom
+        raw_inflation = expert_count / denom
+        # Scaled (0.05 factor) and capped at 0.3 to prevent over-penalizing senior profiles with many skills
+        return min(0.3, raw_inflation * 0.05)
 
     def _check_experience_inflation(self, stated_yoe: float, career_history: List[Dict[str, Any]]) -> float:
         if stated_yoe <= 0.0:
