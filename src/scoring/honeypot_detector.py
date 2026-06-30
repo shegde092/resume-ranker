@@ -1,5 +1,6 @@
 import logging
 import hashlib
+import re
 from typing import Dict, Any, List
 from datetime import datetime
 
@@ -22,6 +23,19 @@ class HoneypotDetector:
         if "vp" in title or "vice president" in title or "chief" in title or "cto" in title or "ceo" in title: return 6
         return 3 # Mid level
 
+    def _parse_year(self, val: Any) -> Any:
+        if val is None:
+            return None
+        if isinstance(val, (int, float)):
+            return int(val)
+        val_str = str(val).strip()
+        if val_str.lower() in ["present", "current", "now", "ongoing"]:
+            return self.current_year
+        match = re.search(r'\b(19|20)\d{2}\b', val_str)
+        if match:
+            return int(match.group(0))
+        return None
+
     def evaluate(self, candidate: Dict[str, Any]) -> Dict[str, Any]:
         reasons = []
         is_suspicious = False
@@ -32,7 +46,13 @@ class HoneypotDetector:
         if stable_id:
             profile_fingerprint = str(stable_id).strip().lower()
         else:
-            raw_text = str(candidate.get("raw_text", "")) + "".join(candidate.get("skills", []))
+            skills_list = []
+            for s in candidate.get("skills", []):
+                if isinstance(s, dict):
+                    skills_list.append(s.get("name") or s.get("skill_name") or "")
+                else:
+                    skills_list.append(str(s))
+            raw_text = str(candidate.get("raw_text", "")) + "".join(skills_list)
             raw_text = raw_text.strip().lower()
             profile_fingerprint = hashlib.md5(raw_text.encode("utf-8")).hexdigest()
             
@@ -41,7 +61,8 @@ class HoneypotDetector:
             is_suspicious = True
         self.seen_profiles.add(profile_fingerprint)
 
-        yoe = candidate.get("years_of_experience", 0)
+        profile = candidate.get("profile", {})
+        yoe = candidate.get("years_of_experience") or profile.get("years_of_experience", 0)
         if yoe is None:
             yoe = 0
             
@@ -61,11 +82,19 @@ class HoneypotDetector:
             prev_level = None
             prev_start = None
             
+            # Map start/end years to integers
+            mapped_history = []
+            for exp in career_history:
+                start_yr = self._parse_year(exp.get("start_year") or exp.get("start_date"))
+                end_yr = self._parse_year(exp.get("end_year") or exp.get("end_date"))
+                mapped_history.append({
+                    "start_year": start_yr,
+                    "end_year": end_yr,
+                    "title": exp.get("title", "")
+                })
+            
             # Sort by start year ascending to check progression
-            try:
-                sorted_history = sorted([h for h in career_history if isinstance(h.get("start_year"), (int, float))], key=lambda x: x["start_year"])
-            except Exception:
-                sorted_history = career_history
+            sorted_history = sorted([h for h in mapped_history if h.get("start_year") is not None], key=lambda x: x["start_year"])
                 
             for exp in sorted_history:
                 start_year = exp.get("start_year")
@@ -73,13 +102,11 @@ class HoneypotDetector:
                 title = exp.get("title", "")
                 
                 # Check overlapping active roles
-                if not end_year or (isinstance(end_year, str) and end_year.lower() in ["present", "current", "now"]):
-                    active_roles += 1
-                elif isinstance(end_year, (int, float)) and end_year >= self.current_year:
+                if not end_year or end_year >= self.current_year:
                     active_roles += 1
                     
-                if isinstance(start_year, (int, float)):
-                    if isinstance(end_year, (int, float)):
+                if start_year is not None:
+                    if end_year is not None:
                         if start_year > end_year:
                             reasons.append("Inconsistent dates: start > end")
                             is_suspicious = True

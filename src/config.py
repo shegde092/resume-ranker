@@ -29,10 +29,12 @@ class Settings(BaseSettings):
     WEIGHT_TRUST: float = 0.20
     WEIGHT_LOGISTICS: float = 0.10
     
-    # Cross Encoder Limits & Batching
-    FALLBACK_CE_CANDIDATES: int = 500
-    MIN_CE_CANDIDATES: int = 300
-    CE_BATCH_SIZE: int = 32
+    # Target Architecture Configuration
+    TOP_K_PRUNE: int = 250
+    WEIGHT_CE_SKILLS: float = 0.40
+    WEIGHT_CE_CAREER: float = 0.30
+    WEIGHT_CE_PROFILE: float = 0.20
+    WEIGHT_CE_EDUCATION: float = 0.10
     
     model_config = SettingsConfigDict(env_file=".env")
 

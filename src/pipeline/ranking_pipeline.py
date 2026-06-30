@@ -2,33 +2,51 @@ import logging
 import uuid
 import copy
 import threading
+import os
+import pickle
 from typing import List, Dict, Any
+from sentence_transformers import SentenceTransformer
 
 from src.parsing.jd_parser import JDParser
 from src.retrieval.dense_retriever import DenseRetriever
 from src.retrieval.bm25_retriever import BM25Retriever
-from src.reranking.block_selector import BlockSelector
 from src.reranking.cross_encoder import ONNXCrossEncoder
 from src.scoring.trust_engine import TrustEngine
 from src.scoring.logistics_engine import LogisticsEngine
+from src.scoring.feature_assembler import FeatureAssembler
 from src.scoring.adaptive_ranker import AdaptiveFusionRanker
 from src.scoring.reason_generator import ReasonGenerator
-from src.scoring.feature_assembler import FeatureAssembler
 from src.scoring.honeypot_detector import HoneypotDetector
+from src.retrieval.fusion import ReciprocalRankFusion
+from src.config import settings
 
 logger = logging.getLogger(__name__)
 
-from src.retrieval.fusion import ReciprocalRankFusion
 class RankingPipeline:
     """
-    Master orchestrator for the candidate ranking flow.
+    Master orchestrator for the candidate ranking flow using a Sectional Multi-Index Architecture.
     """
     def __init__(self):
         self.jd_parser = JDParser()
-        self.dense_retriever = DenseRetriever()
-        self.bm25_retriever = BM25Retriever()
+        
+        # Load shared embedding model
+        model_name = getattr(settings, 'EMBEDDING_MODEL', "BAAI/bge-small-en-v1.5")
+        logger.info(f"Initializing shared SentenceTransformer encoder: {model_name}...")
+        self.shared_encoder = SentenceTransformer(model_name)
+        
+        # 4 Dense Retriever instances (generic code, distinct instances)
+        self.career_dense = DenseRetriever(model_or_name=self.shared_encoder)
+        self.skills_dense = DenseRetriever(model_or_name=self.shared_encoder)
+        self.profile_dense = DenseRetriever(model_or_name=self.shared_encoder)
+        self.education_dense = DenseRetriever(model_or_name=self.shared_encoder)
+        
+        # 4 BM25 Retriever instances
+        self.career_bm25 = BM25Retriever()
+        self.skills_bm25 = BM25Retriever()
+        self.profile_bm25 = BM25Retriever()
+        self.education_bm25 = BM25Retriever()
+        
         self.fusion = ReciprocalRankFusion()
-        self.block_selector = BlockSelector()
         self.cross_encoder = ONNXCrossEncoder()
         
         if hasattr(self.cross_encoder, "warmup"):
@@ -41,161 +59,146 @@ class RankingPipeline:
         self.reason_generator = ReasonGenerator()
         self.honeypot_detector = HoneypotDetector()
         
+        self.candidate_cache = {}
+        self.trust_features = {}
+        
         self._index_lock = threading.Lock()
         self._indexed_candidate_ids = set()
 
-    def _build_indices(self, candidates: List[Dict[str, Any]]):
-        """
-        Incrementally builds or updates global FAISS and BM25 indices with new candidates.
-        """
-        new_documents = []
-        new_candidate_ids = []
-        
-        with self._index_lock:
-            for cand in candidates:
-                cand_id = cand.get("candidate_id")
-                if not cand_id:
-                    continue  # Should be assigned prior
-                    
-                if cand_id in self._indexed_candidate_ids:
-                    continue
-                    
-                text_parts = []
-                if "profile" in cand:
-                    text_parts.append(str(cand["profile"].get("headline", "")))
-                if "skills" in cand:
-                    text_parts.append(" ".join(cand["skills"]))
-                for exp in cand.get("career_history", []):
-                    text_parts.append(str(exp.get("title", "")))
-                    text_parts.append(str(exp.get("description", "")))
-                    
-                if not text_parts:
-                    # Fallback for flat schemas or missing keys
-                    if "raw_text" in cand:
-                        text_parts.append(str(cand["raw_text"]))
-                    elif "resume_text" in cand:
-                        text_parts.append(str(cand["resume_text"]))
-                    else:
-                        # Extract all possible string content as a final safety net
-                        for v in cand.values():
-                            if isinstance(v, str):
-                                text_parts.append(v)
-                            elif isinstance(v, list):
-                                text_parts.append(" ".join(str(item) for item in v))
-                
-                new_documents.append(" ".join(text_parts))
-                new_candidate_ids.append(cand_id)
-                self._indexed_candidate_ids.add(cand_id)
-                
-            if new_documents:
-                logger.info(f"Adding {len(new_documents)} new candidates to indices...")
-                self.dense_retriever.add_candidates(new_documents, new_candidate_ids)
-                self.bm25_retriever.add_candidates(new_documents, new_candidate_ids)
-
     def load_artifacts(self, artifacts_dir: str):
-        """Loads precomputed FAISS, BM25 indices, and candidate cache."""
-        logger.info("Loading offline artifacts...")
-        import os, pickle
-        self.dense_retriever.load(os.path.join(artifacts_dir, "dense"))
-        self.bm25_retriever.load(os.path.join(artifacts_dir, "bm25.pkl"))
+        """Loads precomputed FAISS, BM25 indices, candidate cache, and static trust features."""
+        logger.info("Loading precomputed sectional offline artifacts...")
+        
+        # Load dense indexes
+        self.career_dense.load(os.path.join(artifacts_dir, "career_dense"))
+        self.skills_dense.load(os.path.join(artifacts_dir, "skills_dense"))
+        self.profile_dense.load(os.path.join(artifacts_dir, "profile_dense"))
+        self.education_dense.load(os.path.join(artifacts_dir, "education_dense"))
+        
+        # Load BM25 indexes
+        self.career_bm25.load(os.path.join(artifacts_dir, "career_bm25.pkl"))
+        self.skills_bm25.load(os.path.join(artifacts_dir, "skills_bm25.pkl"))
+        self.profile_bm25.load(os.path.join(artifacts_dir, "profile_bm25.pkl"))
+        self.education_bm25.load(os.path.join(artifacts_dir, "education_bm25.pkl"))
+        
+        # Load candidate cache
         with open(os.path.join(artifacts_dir, "candidate_cache.pkl"), "rb") as f:
             self.candidate_cache = pickle.load(f)
+            
+        # Load precomputed static trust features
+        trust_pkl = os.path.join(artifacts_dir, "trust_features.pkl")
+        if os.path.exists(trust_pkl):
+            with open(trust_pkl, "rb") as f:
+                self.trust_features = pickle.load(f)
+        else:
+            logger.warning("trust_features.pkl not found. Trust features will be evaluated dynamically.")
+            self.trust_features = {}
+            
         logger.info(f"Loaded {len(self.candidate_cache)} candidates into cache.")
 
-    def run(self, raw_jd: str, all_resumes: List[Dict[str, Any]] = None, top_k: int = 2000) -> List[Dict[str, Any]]:
-        logger.info("Starting candidate ranking pipeline...")
+    def run(self, raw_jd: str, all_resumes: List[Dict[str, Any]] = None, top_k: int = 250) -> List[Dict[str, Any]]:
+        logger.info("Starting candidate ranking pipeline (Sectional Multi-Index)...")
         
+        # Stage 1: JD Parser
         parsed_jd = self.jd_parser.parse(raw_jd)
-        query = parsed_jd.get("query", raw_jd)
+        jd_chunks = parsed_jd.get("chunks", {})
         
-        resume_dict = getattr(self, "candidate_cache", {})
+        jd_career = str(jd_chunks.get("career", "")).strip()
+        jd_skills = str(jd_chunks.get("skills", "")).strip()
+        jd_profile = str(jd_chunks.get("profile", "")).strip()
+        jd_education = str(jd_chunks.get("education", "")).strip()
         
         if all_resumes is not None:
-            for cand in all_resumes:
-                cand_id = cand.get("candidate_id")
-                if not cand_id:
-                    cand_id = uuid.uuid4().hex
-                
-                local_cand = copy.deepcopy(cand)
-                local_cand["candidate_id"] = cand_id
-                resume_dict[cand_id] = local_cand
-                
-            self._build_indices(list(resume_dict.values()))
-        
-        dense_results = self.dense_retriever.search(query, top_k=top_k)
-        bm25_results = self.bm25_retriever.search(query, top_k=top_k)
-        
-        allowed_ids = set(resume_dict.keys())
-        
-        dense_results = {
-            cid: score for cid, score in dense_results.items()
-            if cid in allowed_ids
-        }
-        
-        bm25_results = {
-            cid: score for cid, score in bm25_results.items()
-            if cid in allowed_ids
-        }
-        
-        retrieved_candidates = self.fusion.fuse(dense_results, bm25_results, top_k=top_k)
-        
-        if not retrieved_candidates:
-            logger.warning("Retrieval returned empty candidates.")
-            return []
+            self._build_dynamic_indices(all_resumes)
             
-        enriched_retrieved = []
-        for cand in retrieved_candidates:
-            cand_id = cand["candidate_id"]
-            if cand_id not in resume_dict:
+        # Stage 2: Sectional Retrieval
+        career_dense_res = {}
+        if jd_career:
+            career_q_emb = self.shared_encoder.encode([jd_career], normalize_embeddings=True)
+            career_dense_res = self.career_dense.search(jd_career, top_k=top_k, precomputed_query_embedding=career_q_emb)
+        career_bm25_res = self.career_bm25.search(jd_career, top_k=top_k) if jd_career else {}
+        
+        skills_dense_res = {}
+        if jd_skills:
+            skills_q_emb = self.shared_encoder.encode([jd_skills], normalize_embeddings=True)
+            skills_dense_res = self.skills_dense.search(jd_skills, top_k=top_k, precomputed_query_embedding=skills_q_emb)
+        skills_bm25_res = self.skills_bm25.search(jd_skills, top_k=top_k) if jd_skills else {}
+        
+        profile_dense_res = {}
+        if jd_profile:
+            profile_q_emb = self.shared_encoder.encode([jd_profile], normalize_embeddings=True)
+            profile_dense_res = self.profile_dense.search(jd_profile, top_k=top_k, precomputed_query_embedding=profile_q_emb)
+        profile_bm25_res = self.profile_bm25.search(jd_profile, top_k=top_k) if jd_profile else {}
+        
+        education_dense_res = {}
+        if jd_education:
+            education_q_emb = self.shared_encoder.encode([jd_education], normalize_embeddings=True)
+            education_dense_res = self.education_dense.search(jd_education, top_k=top_k, precomputed_query_embedding=education_q_emb)
+        education_bm25_res = self.education_bm25.search(jd_education, top_k=top_k) if jd_education else {}
+        
+        # Stage 3: RRF Fusion across all 8 retrieval streams
+        rrf_scores = {}
+        streams = [
+            career_dense_res, career_bm25_res,
+            skills_dense_res, skills_bm25_res,
+            profile_dense_res, profile_bm25_res,
+            education_dense_res, education_bm25_res
+        ]
+        
+        for stream in streams:
+            if not stream:
                 continue
+            ranked = sorted(stream.items(), key=lambda item: item[1], reverse=True)
+            for rank, (cand_id, _) in enumerate(ranked, start=1):
+                if cand_id not in rrf_scores:
+                    rrf_scores[cand_id] = 0.0
+                rrf_scores[cand_id] += 1.0 / (60 + rank)
                 
-            full_cand = resume_dict[cand_id].copy()
-            full_cand["score"] = cand["score"]
-            enriched_retrieved.append(full_cand)
-            
-        # Task 3: Reduce CPU bottleneck by limiting cross-encoder pool to 100
-        candidates_to_rerank = enriched_retrieved[:100]
-            
-        query_terms = self.block_selector.get_query_terms(query)
-        for cand in candidates_to_rerank:
-            selected_blocks = self.block_selector.select_blocks(cand, query_terms)
-            cand.update(selected_blocks)
-            
-        ce_results = self.cross_encoder.rerank(query, candidates_to_rerank)
-        
-        if not ce_results:
-            logger.warning("Reranking returned empty candidates.")
+        if not rrf_scores:
+            logger.warning("All sectional retrieval streams returned empty candidates.")
             return []
             
-        ce_dict = {res.get("candidate_id"): res for res in ce_results}
-        reranked_candidates = []
-        for cand in candidates_to_rerank:
-            cand_id = cand.get("candidate_id")
-            if cand_id in ce_dict:
-                cand.update(ce_dict[cand_id])
-                reranked_candidates.append(cand)
+        # Stage 4: Pruning to fixed TOP_K = 250 candidates
+        fused_ranked = sorted(rrf_scores.items(), key=lambda item: item[1], reverse=True)
+        prune_k = getattr(settings, 'TOP_K_PRUNE', 250)
+        top_candidates = fused_ranked[:prune_k]
         
-        for cand in reranked_candidates:
-            trust_result = self.trust_engine.evaluate(cand)
-            cand["trust_score"] = trust_result.get("trust_score", 1.0)
+        candidates_to_rerank = []
+        for cand_id, rrf_score in top_candidates:
+            if cand_id not in self.candidate_cache:
+                continue
+            full_cand = self.candidate_cache[cand_id].copy()
+            full_cand["retrieval_rrf_score"] = float(rrf_score)
+            candidates_to_rerank.append(full_cand)
+            
+        # Stage 5: Sectional Cross Encoder
+        ce_results = self.cross_encoder.rerank(parsed_jd, candidates_to_rerank)
+        
+        for cand in ce_results:
+            cid = cand.get("candidate_id")
+            
+            static_trust = self.trust_features.get(cid, {})
+            dynamic_trust = self.trust_engine.evaluate(cand)
+            
+            cand["chronology_anomaly"] = static_trust.get("chronology_anomaly", dynamic_trust.get("chronology_anomaly", 0.0))
+            cand["title_chaser_score"] = static_trust.get("title_chaser_score", dynamic_trust.get("title_chaser_score", 0.0))
+            cand["consulting_ratio"] = static_trust.get("consulting_ratio", dynamic_trust.get("consulting_ratio", 0.0))
+            cand["skill_inflation"] = static_trust.get("skill_inflation", dynamic_trust.get("skill_inflation", 0.0))
+            cand["experience_inflation"] = static_trust.get("experience_inflation", dynamic_trust.get("experience_inflation", 0.0))
+            cand["trust_score"] = dynamic_trust.get("trust_score", static_trust.get("trust_score", 1.0))
             
             logistics_result = self.logistics_engine.score(cand, parsed_jd)
             cand.update(logistics_result)
             
-            honeypot_result = self.honeypot_detector.evaluate(cand)
-            cand.update(honeypot_result)
+            if "is_suspicious" not in cand:
+                honeypot_result = self.honeypot_detector.evaluate(cand)
+                cand.update(honeypot_result)
             
-        feature_matrix = self.feature_assembler.process_batch(reranked_candidates)
+        # Stage 6: Feature Fusion
+        feature_matrix = self.feature_assembler.process_batch(ce_results)
+        final_ranked = self.adaptive_ranker.rank(ce_results, feature_matrix, parsed_jd=parsed_jd)
         
-        final_ranked = self.adaptive_ranker.rank(reranked_candidates, feature_matrix)
-        
-        # Apply honeypot penalty and re-sort
-        for cand in final_ranked:
-            honeypot_score = cand.get("honeypot_score", 1.0)
-            cand["final_score"] = cand.get("final_score", 0.0) * honeypot_score
-            
-        final_ranked.sort(key=lambda x: x.get("final_score", 0.0), reverse=True)
-        
+        # Stage 7: Reasoning Engine
         explained_results = []
         for rank_idx, cand in enumerate(final_ranked, start=1):
             explanation = self.reason_generator.generate(cand, parsed_jd, rank=rank_idx)
@@ -203,3 +206,45 @@ class RankingPipeline:
             explained_results.append(cand)
             
         return explained_results
+
+    def _build_dynamic_indices(self, candidates: List[Dict[str, Any]]):
+        """Dynamic fallback indexing for online testing resumes passed via API in a batched manner."""
+        from src.templates.template_builder import TemplateBuilder
+        
+        cids = []
+        career_chunks = []
+        skills_chunks = []
+        profile_chunks = []
+        education_chunks = []
+        
+        for cand in candidates:
+            cid = cand.get("candidate_id") or uuid.uuid4().hex
+            cand["candidate_id"] = cid
+            chunks = TemplateBuilder.build_candidate_chunks(cand)
+            cand_item = cand.copy()
+            cand_item.update({
+                "chunk_career": chunks["career"],
+                "chunk_skills": chunks["skills"],
+                "chunk_profile": chunks["profile"],
+                "chunk_education": chunks["education"]
+            })
+            self.candidate_cache[cid] = cand_item
+            
+            cids.append(cid)
+            career_chunks.append(chunks["career"])
+            skills_chunks.append(chunks["skills"])
+            profile_chunks.append(chunks["profile"])
+            education_chunks.append(chunks["education"])
+            
+        if cids:
+            self.career_dense.add_candidates(career_chunks, cids)
+            self.career_bm25.add_candidates(career_chunks, cids)
+            
+            self.skills_dense.add_candidates(skills_chunks, cids)
+            self.skills_bm25.add_candidates(skills_chunks, cids)
+            
+            self.profile_dense.add_candidates(profile_chunks, cids)
+            self.profile_bm25.add_candidates(profile_chunks, cids)
+            
+            self.education_dense.add_candidates(education_chunks, cids)
+            self.education_bm25.add_candidates(education_chunks, cids)

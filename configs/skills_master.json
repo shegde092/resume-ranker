@@ -1,0 +1,79 @@
+{
+  "vector_search": [
+    "vector db",
+    "vectordb",
+    "vector database",
+    "vector store",
+    "vector search",
+    "pinecone",
+    "weaviate",
+    "qdrant",
+    "milvus",
+    "faiss",
+    "hybrid search",
+    "opensearch",
+    "elasticsearch"
+  ],
+  "embeddings": [
+    "embedding",
+    "embeddings",
+    "sentence-transformer",
+    "sentence-transformers",
+    "sentence transformer",
+    "bge",
+    "e5",
+    "openai embedding"
+  ],
+  "python": [
+    "python"
+  ],
+  "ranking_evaluation": [
+    "ndcg",
+    "mrr",
+    "map",
+    "evaluation",
+    "ab test",
+    "a/b test",
+    "recall",
+    "precision",
+    "ranking evaluation"
+  ],
+  "machine_learning": [
+    "machine learning",
+    "ml",
+    "deep learning",
+    "dl",
+    "transformers",
+    "fine-tuning",
+    "rag",
+    "pytorch",
+    "tensorflow",
+    "keras",
+    "huggingface",
+    "weights & biases"
+  ],
+  "computer_vision": [
+    "computer vision",
+    "image classification",
+    "object detection",
+    "speech",
+    "tts",
+    "asr",
+    "ocr",
+    "gan",
+    "diffusion",
+    "opencv"
+  ],
+  "data_engineering": [
+    "data engineer",
+    "backend",
+    "analytics engineer",
+    "spark",
+    "airflow",
+    "kafka",
+    "snowflake",
+    "databricks",
+    "hadoop",
+    "pipeline"
+  ]
+}

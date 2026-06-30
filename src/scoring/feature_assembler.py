@@ -92,17 +92,15 @@ class FeatureAssembler:
         Extracts a deterministic float feature array from a candidate dictionary.
         """
         # 1. Retrieval Score (Raw RRF to be normalized across the batch)
-        retrieval_rrf = self._safe_float(candidate.get("score"), 0.0)
+        retrieval_rrf = self._safe_float(candidate.get("retrieval_rrf_score"), 0.0)
         
         # 2. Cross Encoder Scores (Clamped to 0-1)
-        ce_career = self._clamp(self._safe_float(candidate.get("career_fit_ce"), 0.0))
-        ce_skill = self._clamp(self._safe_float(candidate.get("skill_fit_ce"), 0.0))
-        ce_profile = self._clamp(self._safe_float(candidate.get("profile_fit_ce"), 0.0))
-        ce_edu = self._clamp(self._safe_float(candidate.get("education_fit_ce"), 0.0))
+        ce_career = self._clamp(self._safe_float(candidate.get("ce_career_score"), 0.0))
+        ce_skill = self._clamp(self._safe_float(candidate.get("ce_skills_score"), 0.0))
+        ce_profile = self._clamp(self._safe_float(candidate.get("ce_profile_score"), 0.0))
+        ce_edu = self._clamp(self._safe_float(candidate.get("ce_education_score"), 0.0))
         
-        # Recompute ce_score_avg directly from section scores rather than trusting input
-        ce_avg = (0.4 * ce_career) + (0.3 * ce_skill) + (0.2 * ce_profile) + (0.1 * ce_edu)
-        ce_avg = self._clamp(ce_avg)
+        ce_avg = self._clamp(self._safe_float(candidate.get("ce_score"), 0.0))
         
         # 3. Trust Score (Clamped)
         trust_score = self._clamp(self._safe_float(candidate.get("trust_score"), 0.5))

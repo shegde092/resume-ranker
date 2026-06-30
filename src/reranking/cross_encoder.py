@@ -59,13 +59,17 @@ class ONNXCrossEncoder:
             
         all_scores = []
         
+        total_tokenization_time = 0.0
+        total_inference_time = 0.0
+        total_postprocessing_time = 0.0
+        
         # Process candidates in batches
         for i in range(0, len(pairs), batch_size):
-            batch_start_time = time.time()
             batch_pairs = pairs[i:i + batch_size]
             
             try:
-                # Tokenize pairs
+                # 1. Tokenize pairs
+                t_token_start = time.time()
                 inputs = self.tokenizer(
                     batch_pairs, 
                     padding=True, 
@@ -81,16 +85,21 @@ class ONNXCrossEncoder:
                 
                 if "token_type_ids" in inputs and any(i_def.name == "token_type_ids" for i_def in self.session.get_inputs()):
                     ort_inputs["token_type_ids"] = inputs["token_type_ids"].astype(np.int64)
+                
+                t_token_duration = time.time() - t_token_start
+                total_tokenization_time += t_token_duration
                     
-                # Inference
+                # 2. ONNX Inference
+                t_infer_start = time.time()
                 logits = self.session.run(None, ort_inputs)[0]
+                t_infer_duration = time.time() - t_infer_start
+                total_inference_time += t_infer_duration
                 
-                # Prevent sigmoid numerical overflow
+                # 3. Postprocess logits
+                t_post_start = time.time()
                 logits = np.clip(logits, -50, 50)
-                
-                # Convert logits to probabilities
                 if logits.ndim > 2:
-                    raise ValueError(f"Expected 1D or 2D logits from cross-encoder, got {logits.ndim}D tensor. Ensure you have loaded a true sequence classification model, not a feature extractor.")
+                    raise ValueError(f"Expected 1D or 2D logits from cross-encoder, got {logits.ndim}D tensor.")
                 elif logits.ndim > 1 and logits.shape[1] == 1:
                     scores = 1 / (1 + np.exp(-logits.flatten()))
                 elif logits.ndim > 1:
@@ -98,15 +107,15 @@ class ONNXCrossEncoder:
                 else:
                     scores = 1 / (1 + np.exp(-logits))
                 all_scores.extend(scores.tolist())
-
+                t_post_duration = time.time() - t_post_start
+                total_postprocessing_time += t_post_duration
+                
             except Exception as e:
                 logger.error(f"CE batch inference failed: {e}")
                 # Return 0.0 for this batch so a single bad candidate doesn't crash the entire request
                 all_scores.extend([0.0] * len(batch_pairs))
                 
-            batch_duration = time.time() - batch_start_time
-            logger.info(f"CE Batch latency: {batch_duration:.3f}s")
-            
+        logger.info(f"CE Profiling: Tokenization={total_tokenization_time:.4f}s | ONNX Inference={total_inference_time:.4f}s | Postprocess={total_postprocessing_time:.4f}s")
         return all_scores
 
     def _safe_scalar(self, value):
@@ -124,128 +133,74 @@ class ONNXCrossEncoder:
 
         return float(value)
 
-    def rerank(self, query: str, candidates: List[Dict[str, Any]], top_k: int = 500) -> List[Dict[str, Any]]:
+    def rerank(self, parsed_jd: Dict[str, Any], candidates: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
-        Rerank retrieved candidates using 4 separate semantic section scores.
-        Ensures strict latency budget compliance.
-        """
-        start_time = time.time()
-        budget = settings.BUDGET_CROSS_ENCODER
+        Rerank candidates using matching sectional chunks:
+        jd_career <-> cand_career
+        jd_skills <-> cand_skills
+        jd_profile <-> cand_profile
+        jd_education <-> cand_education
         
+        Non-empty pairs are predicted in a single unified batch for efficiency.
+        """
         if not candidates:
             return []
             
-        # Lightweight pre-filter step (avoid in-place mutation of caller's list)
-        if all("score" in cand for cand in candidates):
-            candidates = sorted(candidates, key=lambda x: x.get("score", 0.0), reverse=True)
-            
-        ce_limit = getattr(settings, 'MAX_CANDIDATES_CE', 800)
-        ce_candidates = candidates[:ce_limit]
-        num_cands = len(ce_candidates)
-            
-        career_pairs = [(str(query or ""), str(cand.get("career_text") or "")) for cand in ce_candidates]
-        skill_pairs = [(str(query or ""), str(cand.get("skills_text") or "")) for cand in ce_candidates]
-        profile_pairs = [(str(query or ""), str(cand.get("profile_text") or "")) for cand in ce_candidates]
-        edu_pairs = [(str(query or ""), str(cand.get("education_text") or "")) for cand in ce_candidates]
+        jd_chunks = parsed_jd.get("chunks", {})
+        jd_career = str(jd_chunks.get("career", "")).strip()
+        jd_skills = str(jd_chunks.get("skills", "")).strip()
+        jd_profile = str(jd_chunks.get("profile", "")).strip()
+        jd_education = str(jd_chunks.get("education", "")).strip()
         
-        # 1. Career
-        career_scores = self.predict(career_pairs)
+        flat_pairs = []
+        mapping = {}
         
-        # 2. Skills
-        elapsed = time.time() - start_time
-        if elapsed > budget * 0.5:
-            fallback = getattr(settings, 'FALLBACK_CE_CANDIDATES', 500)
-            reduced_limit = min(num_cands, top_k, fallback)
-            skill_pairs = skill_pairs[:reduced_limit]
-            profile_pairs = profile_pairs[:reduced_limit]
-            edu_pairs = edu_pairs[:reduced_limit]
-        else:
-            reduced_limit = num_cands
+        sections = [
+            ("chunk_career", jd_career, "career"),
+            ("chunk_skills", jd_skills, "skills"),
+            ("chunk_profile", jd_profile, "profile"),
+            ("chunk_education", jd_education, "education")
+        ]
+        
+        for idx, cand in enumerate(candidates):
+            for sec_name, jd_text, map_name in sections:
+                cand_text = str(cand.get(sec_name, "")).strip()
+                if jd_text and cand_text:
+                    mapping[(idx, map_name)] = len(flat_pairs)
+                    flat_pairs.append((jd_text, cand_text))
+                    
+        flat_scores = []
+        if flat_pairs:
+            logger.info(f"Running CE batch prediction on {len(flat_pairs)} non-empty pairs...")
+            flat_scores = self.predict(flat_pairs)
             
-        skill_scores_raw = self.predict(skill_pairs)
-        skill_scores = skill_scores_raw + [0.0] * (num_cands - len(skill_scores_raw))
-        
-        # Track which components were skipped to renormalize weights
-        skip_profile = False
-        skip_edu = False
-
-        # Adaptive degradation based on candidate volume
-        if num_cands > 700:
-            logger.warning("Adaptive degradation: skipping profile and education scoring (cands > 700)")
-            profile_scores = [0.0] * num_cands
-            edu_scores = [0.0] * num_cands
-            skip_profile = True
-            skip_edu = True
-        else:
-            # 3. Profile
-            elapsed = time.time() - start_time
-            if elapsed > budget * 0.75:
-                logger.warning("CE latency budget critical, skipping profile scoring")
-                profile_scores = [0.0] * num_cands
-                skip_profile = True
-                
-                # Apply secondary degradation for remaining steps
-                min_cands = getattr(settings, 'MIN_CE_CANDIDATES', 300)
-                reduced_limit = min(reduced_limit, min_cands)
-                edu_pairs = edu_pairs[:reduced_limit]
-            else:
-                profile_scores_raw = self.predict(profile_pairs)
-                profile_scores = profile_scores_raw + [0.0] * (num_cands - len(profile_scores_raw))
-                
-            if num_cands > 600:
-                logger.warning("Adaptive degradation: skipping education scoring (cands > 600)")
-                edu_scores = [0.0] * num_cands
-                skip_edu = True
-            else:
-                # 4. Education
-                elapsed = time.time() - start_time
-                if elapsed > budget * 0.90:
-                    logger.warning("CE latency budget exhausted, skipping education scoring")
-                    edu_scores = [0.0] * num_cands
-                    skip_edu = True
-                else:
-                    edu_scores_raw = self.predict(edu_pairs)
-                    edu_scores = edu_scores_raw + [0.0] * (num_cands - len(edu_scores_raw))
+        w_skills = getattr(settings, 'WEIGHT_CE_SKILLS', 0.40)
+        w_career = getattr(settings, 'WEIGHT_CE_CAREER', 0.30)
+        w_profile = getattr(settings, 'WEIGHT_CE_PROFILE', 0.20)
+        w_education = getattr(settings, 'WEIGHT_CE_EDUCATION', 0.10)
         
         scored_candidates = []
-        
-        for i, cand in enumerate(ce_candidates):
-            # Safe score indexing
-            c_fit = self._safe_scalar(career_scores[i]) if i < len(career_scores) else 0.0
-            s_fit = self._safe_scalar(skill_scores[i]) if i < len(skill_scores) else 0.0
-            p_fit = self._safe_scalar(profile_scores[i]) if i < len(profile_scores) else 0.0
-            e_fit = self._safe_scalar(edu_scores[i]) if i < len(edu_scores) else 0.0
+        for idx, cand in enumerate(candidates):
+            c_score = flat_scores[mapping[(idx, "career")]] if (idx, "career") in mapping else 0.0
+            s_score = flat_scores[mapping[(idx, "skills")]] if (idx, "skills") in mapping else 0.0
+            p_score = flat_scores[mapping[(idx, "profile")]] if (idx, "profile") in mapping else 0.0
+            e_score = flat_scores[mapping[(idx, "education")]] if (idx, "education") in mapping else 0.0
             
-            # Preserve existing candidate fields
+            ce_score = (
+                (w_career * c_score) +
+                (w_skills * s_score) +
+                (w_profile * p_score) +
+                (w_education * e_score)
+            )
+            
             cand_out = cand.copy()
             cand_out.update({
-                "career_fit_ce": c_fit,
-                "skill_fit_ce": s_fit,
-                "profile_fit_ce": p_fit,
-                "education_fit_ce": e_fit
+                "ce_career_score": float(c_score),
+                "ce_skills_score": float(s_score),
+                "ce_profile_score": float(p_score),
+                "ce_education_score": float(e_score),
+                "ce_score": float(ce_score)
             })
+            scored_candidates.append(cand_out)
             
-            # Adaptive Weight Normalization
-            weight_sum = 0.4 + 0.3
-            score_sum = (0.4 * c_fit) + (0.3 * s_fit)
-            
-            if not skip_profile:
-                weight_sum += 0.2
-                score_sum += (0.2 * p_fit)
-                
-            if not skip_edu:
-                weight_sum += 0.1
-                score_sum += (0.1 * e_fit)
-            
-            ce_score_avg = score_sum / weight_sum if weight_sum > 0 else 0.0
-            cand_out["ce_score_avg"] = ce_score_avg
-            
-            scored_candidates.append((ce_score_avg, cand_out))
-            
-        scored_candidates.sort(key=lambda x: x[0], reverse=True)
-        final_candidates = [cand for _, cand in scored_candidates[:top_k]]
-        
-        total_duration = time.time() - start_time
-        logger.info(f"CrossEncoder reranking took {total_duration:.3f}s")
-        
-        return final_candidates
+        return scored_candidates

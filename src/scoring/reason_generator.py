@@ -11,7 +11,7 @@ class ReasonGenerator:
     
     def generate(self, candidate: Dict[str, Any], parsed_jd: Dict[str, Any] = None, rank: int = None) -> Dict[str, Any]:
         """
-        Takes a scored candidate dictionary, parsed JD, and rank, appending 'confidence' and 'reason'.
+        Generates explanation mapping candidate facts to JD requirements.
         """
         if parsed_jd is None:
             parsed_jd = {}
@@ -19,77 +19,75 @@ class ReasonGenerator:
         final_score = candidate.get("final_score", 0.0)
         trust_score = candidate.get("trust_score", 1.0)
         
-        # Determine confidence based on rank and score thresholds
-        if rank is not None:
-            if rank <= 20 and final_score >= 0.50:
-                confidence = "high"
-            elif rank <= 100 and final_score >= 0.30:
-                confidence = "medium"
-            else:
-                confidence = "low"
+        if final_score >= 0.65:
+            confidence = "high"
+        elif final_score >= 0.35:
+            confidence = "medium"
         else:
-            if final_score >= 0.75:
-                confidence = "high"
-            elif final_score >= 0.50:
-                confidence = "medium"
-            else:
-                confidence = "low"
+            confidence = "low"
             
         reasons = []
         
-        jd_skills = set(str(s).lower() for s in parsed_jd.get("required_skills", []))
-        cand_skills = set(str(s).lower() for s in candidate.get("skills", []))
-        
-        matched_skills = list(jd_skills.intersection(cand_skills))[:3]
-        
-        yoe = candidate.get("years_of_experience")
-        jd_yoe = parsed_jd.get("min_years_experience")
-        
-        if final_score >= 0.75:
-            base_reason = "Strong match due to"
-            if matched_skills:
-                base_reason += f" {', '.join(matched_skills).title()} overlap"
-            else:
-                base_reason += " semantic skill overlap"
+        # Skill overlap
+        jd_skills = parsed_jd.get("required_skills", [])
+        cand_skills_str = str(candidate.get("skills", "")).lower()
+        matched_skills = []
+        for skill in jd_skills:
+            if skill.lower().replace('_', ' ') in cand_skills_str:
+                matched_skills.append(skill)
                 
+        # YoE check
+        profile = candidate.get("profile", {})
+        yoe = candidate.get("years_of_experience") or profile.get("years_of_experience")
+        jd_yoe_min = parsed_jd.get("yoe_min")
+        
+        # Match Base
+        if final_score >= 0.65:
+            base = "Excellent profile match"
+            if matched_skills:
+                base += f" with key skills in {', '.join(matched_skills[:3]).replace('_', ' ').title()}"
             if yoe is not None:
-                base_reason += f" and {yoe} years relevant experience"
-                
-            reasons.append(base_reason)
-            
-        elif final_score >= 0.50:
-            base_reason = "Good semantic fit"
+                base += f" and {yoe} years of relevant experience"
+            reasons.append(base)
+        elif final_score >= 0.35:
+            base = "Good match"
             if matched_skills:
-                base_reason += f" with some {', '.join(matched_skills).title()} overlap"
-            
-            missing_skills = list(jd_skills - cand_skills)[:2]
-            if missing_skills:
-                base_reason += f" but lacks required {', '.join(missing_skills).title()} experience"
-                
-            reasons.append(base_reason)
-            
+                base += f" showing capability in {', '.join(matched_skills[:2]).replace('_', ' ').title()}"
+            reasons.append(base)
         else:
-            base_reason = "Partial skill overlap"
-            if yoe is not None and jd_yoe is not None and yoe < jd_yoe:
-                base_reason += f" but weaker experience ({yoe} vs {jd_yoe} required)"
-            elif trust_score < 0.7:
-                base_reason += " but lower trust confidence"
-            reasons.append(base_reason)
+            base = "Partial match"
+            if yoe is not None and jd_yoe_min is not None and float(yoe) < float(jd_yoe_min):
+                base += f" with lower experience ({yoe} years vs required {jd_yoe_min} years)"
+            reasons.append(base)
             
-        if candidate.get("is_suspicious"):
-            honeypot_reasons = candidate.get("honeypot_reasons", [])
-            reason_str = ", ".join(honeypot_reasons) if honeypot_reasons else "suspicious profile anomalies"
-            reasons.append(f"Major concern: {reason_str}")
+        # Logistics & Availability
+        redrob_signals = candidate.get("redrob_signals", {})
+        notice = candidate.get("notice_period_days") or candidate.get("notice_period") or redrob_signals.get("notice_period_days")
+        if notice is not None:
+            try:
+                n_days = int(notice)
+                if n_days <= 15:
+                    reasons.append("Highly available (notice <= 15 days)")
+            except:
+                pass
+                
+        location_mult = candidate.get("location_multiplier", 1.0)
+        if location_mult >= 0.9:
+            reasons.append("Strong location alignment")
             
-        if not reasons:
-            reasons.append("Profile matches baseline requirements")
+        # Trust Warning
+        if trust_score < 0.7:
+            reasons.append("Tenure hopping or chronology overlaps detected")
+            
+        # Anti-Persona Warning
+        anti_mult = candidate.get("anti_persona_penalty", 1.0)
+        if anti_mult < 0.9:
+            reasons.append("Indicators of consulting background or research focus")
             
         reason_str = "; ".join(reasons) + "."
-        # Capitalize first letter
         if reason_str:
             reason_str = reason_str[0].upper() + reason_str[1:]
-        
-        # Format the required output schema
+            
         return {
             "candidate_id": candidate.get("candidate_id", "UNKNOWN"),
             "final_score": float(final_score),
