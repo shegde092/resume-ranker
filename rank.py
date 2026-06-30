@@ -4,6 +4,7 @@ import json
 import csv
 import argparse
 import logging
+import math
 from typing import List, Dict, Any
 
 from src.pipeline.ranking_pipeline import RankingPipeline
@@ -15,48 +16,65 @@ logger = logging.getLogger("rank")
 
 def main():
     parser = argparse.ArgumentParser(description="Redrob Candidate Ranking Submission Script")
-    parser.add_argument("--candidates", type=str, required=True, help="Path to candidates.jsonl (ignored, uses offline artifacts instead)")
+    parser.add_argument("--candidates", type=str, required=True, help="Path to candidate dataset (.json or .jsonl)")
     parser.add_argument("--out", type=str, required=True, help="Path to output submission.csv")
-    parser.add_argument("--jd", type=str, default="Looking for a Python machine learning engineer with NLP and FastAPI experience", help="Job description string or path to txt")
-    parser.add_argument("--artifacts", type=str, default="artifacts", help="Path to precomputed artifacts directory")
+    parser.add_argument("--jd", type=str, required=True, help="Job description string or path to txt/doc/json")
     args = parser.parse_args()
 
+    # Load JD
     jd = args.jd
     if os.path.exists(jd):
         with open(jd, 'r', encoding='utf-8') as f:
             jd = f.read().strip()
             
+    # Load Candidates
+    logger.info(f"Loading candidates from {args.candidates}...")
+    candidates = []
+    if args.candidates.endswith('.json'):
+        with open(args.candidates, 'r', encoding='utf-8') as f:
+            candidates = json.load(f)
+            if isinstance(candidates, dict):
+                candidates = [candidates]
+    else:
+        with open(args.candidates, 'r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if line:
+                    candidates.append(json.loads(line))
+                    
+    logger.info(f"Loaded {len(candidates)} candidates.")
+
     logger.info("Initializing Ranking Pipeline...")
     pipeline = RankingPipeline()
     
-    logger.info(f"Loading offline artifacts from {args.artifacts}...")
-    if not os.path.exists(args.artifacts):
-        logger.error(f"Artifacts directory not found: {args.artifacts}. Please run scripts/precompute.py first.")
-        sys.exit(1)
-        
-    pipeline.load_artifacts(args.artifacts)
-    
-    logger.info("Running online ranking (no indices rebuilt)...")
-    # We pass all_resumes=None since the cache is already loaded
-    results = pipeline.run(raw_jd=jd, all_resumes=None, top_k=min(2000, len(pipeline.candidate_cache)))
+    logger.info("Running ranking (building indices dynamically)...")
+    results = pipeline.run(raw_jd=jd, all_resumes=candidates, top_k=min(2000, len(candidates)))
     
     # Sort by final_score (descending), break ties using candidate_id (ascending)
     results.sort(key=lambda x: (-x.get("final_score", 0.0), x.get("candidate_id", "")))
     top_100 = results[:100]
     
-    # Enforce exactly 100 constraint? The requirements say "Constraints: exactly 100 rows"
-    # If we have less than 100 candidates, we just output what we have, but hopefully the dataset has >= 100.
+    def calculate_fit(score):
+        score = max(0.0, min(1.0, float(score)))
+        fit = 100.0 / (1.0 + math.exp(-8.0 * (score - 0.5)))
+        return round(fit, 2)
     
     logger.info(f"Exporting top {len(top_100)} candidates to {args.out}")
     with open(args.out, 'w', encoding='utf-8', newline='') as f:
         writer = csv.writer(f)
-        writer.writerow(["candidate_id", "rank", "score", "reasoning"])
+        writer.writerow(["candidate_id", "rank", "fit_percentage", "reasoning"])
         
         for rank, cand in enumerate(top_100, start=1):
             candidate_id = cand.get("candidate_id", f"unknown_{rank}")
             score = cand.get("final_score", 0.0)
-            reasoning = cand.get("reason", "")
-            writer.writerow([candidate_id, rank, score, reasoning])
+            fit_percentage = calculate_fit(score)
+            reasoning = cand.get("reasoning", cand.get("reason", ""))
+            writer.writerow([
+                candidate_id,
+                rank,
+                fit_percentage,
+                reasoning
+            ])
             
     logger.info("Done.")
 

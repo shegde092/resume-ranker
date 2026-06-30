@@ -49,7 +49,15 @@ class FeatureAssembler:
             "recruiter_response_rate",
             "open_to_work_flag",
             "notice_period_days",
-            "interview_completion_rate"
+            "interview_completion_rate",
+            "github_activity_score",
+            "offer_acceptance_rate",
+            "search_appearance",
+            "recruiter_saved_count",
+            "work_mode_match",
+            "relocation_match",
+            "verification_score",
+            "skill_assessment_score"
         ]
         
         self.feature_index = {
@@ -87,7 +95,18 @@ class FeatureAssembler:
             return 0.0
         return value
         
-    def extract_features(self, candidate: Dict[str, Any]) -> List[float]:
+    def _normalize_mode(self, mode: Any) -> str:
+        if not mode:
+            return ""
+        mode = str(mode).strip().lower()
+        aliases = {
+            "on-site": "onsite",
+            "on site": "onsite",
+            "wfh": "remote"
+        }
+        return aliases.get(mode, mode)
+        
+    def extract_features(self, candidate: Dict[str, Any], parsed_jd: Dict[str, Any] = None) -> List[float]:
         """
         Extracts a deterministic float feature array from a candidate dictionary.
         """
@@ -119,12 +138,58 @@ class FeatureAssembler:
         
         # 6. Recruiter & Profile Quality Signals (P1)
         redrob_signals = candidate.get("redrob_signals", {})
-        profile_completeness_score = self._clamp(self._safe_float(candidate.get("profile_completeness_score", redrob_signals.get("profile_completeness_score")), 0.5))
+        raw_profile = self._safe_float(candidate.get("profile_completeness_score", redrob_signals.get("profile_completeness_score")), 50.0)
+        profile_completeness_score = self._clamp(raw_profile / 100.0)
         recruiter_response_rate = self._clamp(self._safe_float(redrob_signals.get("recruiter_response_rate"), 0.5))
-        open_to_work_flag = 1.0 if candidate.get("open_to_work") or redrob_signals.get("open_to_work") else 0.0
+        open_to_work_flag = 1.0 if redrob_signals.get("open_to_work_flag") else 0.0
         raw_notice = self._safe_float(candidate.get("notice_period_days", redrob_signals.get("notice_period_days")), 30.0)
         notice_period_days = self._clamp(raw_notice / 90.0)
         interview_completion_rate = self._clamp(self._safe_float(redrob_signals.get("interview_completion_rate"), 0.5))
+        
+        # 7. New Expanded Features
+        raw_github = self._safe_float(redrob_signals.get("github_activity_score", -1.0), -1.0)
+        if raw_github == -1.0:
+            github_activity_score = 0.3
+        else:
+            github_activity_score = self._clamp(raw_github / 100.0)
+            
+        offer_acceptance_rate = self._clamp(self._safe_float(redrob_signals.get("offer_acceptance_rate"), 0.5))
+        
+        # Normalize search appearances (e.g. max 500)
+        search_app_raw = self._safe_float(redrob_signals.get("search_appearance_30d", 0))
+        search_appearance = self._clamp(search_app_raw / 500.0)
+        
+        # Normalize saves (e.g. max 50)
+        saves_raw = self._safe_float(redrob_signals.get("saved_by_recruiters_30d", 0))
+        recruiter_saved_count = self._clamp(saves_raw / 50.0)
+        
+        cand_mode = self._normalize_mode(redrob_signals.get("preferred_work_mode", ""))
+        required_modes = parsed_jd.get("required_work_mode", []) if parsed_jd else []
+        if isinstance(required_modes, str):
+            required_modes = [required_modes] if required_modes else []
+        required_modes = [self._normalize_mode(m) for m in required_modes]
+            
+        if not required_modes:
+            work_mode_match = 0.5
+        elif not cand_mode:
+            work_mode_match = 0.25
+        elif cand_mode == "flexible" or cand_mode in required_modes:
+            work_mode_match = 1.0
+        else:
+            work_mode_match = 0.0
+            
+        relocation_match = 1.0 if redrob_signals.get("willing_to_relocate") else 0.5
+        
+        v_email = 1.0 if redrob_signals.get("verified_email") else 0.0
+        v_phone = 1.0 if redrob_signals.get("verified_phone") else 0.0
+        v_li = 1.0 if redrob_signals.get("linkedin_connected") else 0.0
+        verification_score = (0.4 * v_email) + (0.4 * v_phone) + (0.2 * v_li)
+        
+        # Avg skill assessment score if any
+        assessment_scores = redrob_signals.get("skill_assessment_scores", {})
+        assess_scores = [s for s in (self._safe_float(v) for v in assessment_scores.values()) if s > 0]
+        avg_assessment = sum(assess_scores) / len(assess_scores) if assess_scores else 0.0
+        skill_assessment_score = self._clamp(avg_assessment / 100.0 if avg_assessment > 1 else avg_assessment)
         
         features = [
             retrieval_rrf,
@@ -146,7 +211,15 @@ class FeatureAssembler:
             recruiter_response_rate,
             open_to_work_flag,
             notice_period_days,
-            interview_completion_rate
+            interview_completion_rate,
+            github_activity_score,
+            offer_acceptance_rate,
+            search_appearance,
+            recruiter_saved_count,
+            work_mode_match,
+            relocation_match,
+            verification_score,
+            skill_assessment_score
         ]
         
         # 6. Feature Shape Validation
@@ -158,7 +231,7 @@ class FeatureAssembler:
             
         return features
 
-    def process_batch(self, candidates: List[Dict[str, Any]]) -> np.ndarray:
+    def process_batch(self, candidates: List[Dict[str, Any]], parsed_jd: Dict[str, Any] = None) -> np.ndarray:
         """
         Processes a list of candidates and returns a numpy array of feature vectors.
         Shape: (num_candidates, num_features)
@@ -168,7 +241,7 @@ class FeatureAssembler:
             
         feature_matrix = []
         for cand in candidates:
-            feat_vec = self.extract_features(cand)
+            feat_vec = self.extract_features(cand, parsed_jd)
             feature_matrix.append(feat_vec)
             
         matrix = np.array(feature_matrix, dtype=np.float32)
